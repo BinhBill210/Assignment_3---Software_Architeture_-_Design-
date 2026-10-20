@@ -1,0 +1,10 @@
+bin/
+obj/
+.vs/
+*.user
+TestResults/
+App_Data/
+
+# Unit materials supplied by the convenor
+*.pdf
+*.doc
