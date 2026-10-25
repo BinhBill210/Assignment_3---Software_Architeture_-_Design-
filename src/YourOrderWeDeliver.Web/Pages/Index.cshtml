@@ -1,0 +1,101 @@
+﻿@page
+@model IndexModel
+@{
+    ViewData["Title"] = "Home";
+    bool signedIn = User.Identity?.IsAuthenticated ?? false;
+}
+
+<div class="p-4 mb-4 bg-white rounded-3 shadow-sm">
+    <h1 class="h3">Delivery Management System</h1>
+    <p class="text-muted mb-0">
+        Parcel delivery across Greater Melbourne: request a delivery, receive a quote, and follow your parcels until they arrive.
+    </p>
+</div>
+
+@if (!signedIn)
+{
+    <h2 class="h5 mb-3">For customers</h2>
+    <div class="row g-3 mb-4">
+        <div class="col-md-4">
+            <div class="card home-tile"><div class="card-body">
+                <h3 class="h6">1. Request a delivery</h3>
+                <p class="small text-muted">Enter pickup, destination and parcel details. You receive a reference number.</p>
+                <a class="btn btn-primary" asp-page="/Request/New">Request a delivery</a>
+            </div></div>
+        </div>
+        <div class="col-md-4">
+            <div class="card home-tile"><div class="card-body">
+                <h3 class="h6">2. Respond to your quote</h3>
+                <p class="small text-muted">Review the cost and times our office proposes, then accept or decline.</p>
+                <a class="btn btn-outline-primary" asp-page="/Quote/Respond">Respond to a quote</a>
+            </div></div>
+        </div>
+        <div class="col-md-4">
+            <div class="card home-tile"><div class="card-body">
+                <h3 class="h6">3. Track your delivery</h3>
+                <p class="small text-muted">Use your reference and email or phone number to see the current status.</p>
+                <a class="btn btn-outline-primary" asp-page="/Track/Index">Track a delivery</a>
+            </div></div>
+        </div>
+    </div>
+    <p class="text-muted small">Staff members: use <a asp-page="/Account/SignIn">Staff sign in</a> to access office, delivery and management activities.</p>
+}
+else if (User.IsOffice())
+{
+    <div class="row g-3 mb-4">
+        <div class="col-md-3">
+            <div class="card"><div class="card-body">
+                <div class="text-muted small">Requests waiting for a quote</div>
+                <div class="stat-value">@Model.RequestsAwaitingQuote</div>
+                <a asp-page="/Office/Requests/Index" asp-route-status="Submitted">Prepare quotes</a>
+            </div></div>
+        </div>
+        <div class="col-md-3">
+            <div class="card"><div class="card-body">
+                <div class="text-muted small">Deliveries waiting for allocation</div>
+                <div class="stat-value">@Model.DeliveriesAwaitingAllocation</div>
+                <a asp-page="/Office/Allocation/Index">Allocate staff</a>
+            </div></div>
+        </div>
+        <div class="col-md-3">
+            <div class="card"><div class="card-body">
+                <div class="text-muted small">Active delivery staff</div>
+                <div class="stat-value">@Model.ActiveStaff</div>
+                <a asp-page="/Availability/Index">Manage availability</a>
+            </div></div>
+        </div>
+        <div class="col-md-3">
+            <div class="card"><div class="card-body">
+                <div class="text-muted small">Record a request for a customer</div>
+                <div class="stat-value">+</div>
+                <a asp-page="/Request/New">New delivery request</a>
+            </div></div>
+        </div>
+    </div>
+    @if (User.IsInRole(Roles.Manager))
+    {
+        <div class="d-flex gap-2">
+            <a class="btn btn-primary" asp-page="/Manager/Statistics">View delivery statistics</a>
+            <a class="btn btn-outline-primary" asp-page="/Manager/Staff/Index">Maintain staff records</a>
+        </div>
+    }
+}
+else
+{
+    <div class="row g-3">
+        <div class="col-md-4">
+            <div class="card"><div class="card-body">
+                <div class="text-muted small">My current deliveries</div>
+                <div class="stat-value">@Model.MyCurrentDeliveries</div>
+                <a class="btn btn-primary mt-2" asp-page="/Driver/Index">Open my deliveries</a>
+            </div></div>
+        </div>
+        <div class="col-md-4">
+            <div class="card"><div class="card-body">
+                <div class="text-muted small">Availability</div>
+                <p class="small">Keep your availability up to date so the office can schedule you.</p>
+                <a class="btn btn-outline-primary" asp-page="/Availability/Index">Update my availability</a>
+            </div></div>
+        </div>
+    </div>
+}

@@ -1,0 +1,101 @@
+﻿<!DOCTYPE html>
+<html lang="en-AU">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"] - Your Order We Deliver</title>
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+</head>
+<body>
+    <header>
+        <nav class="navbar navbar-expand-lg navbar-dark bg-yowd mb-4">
+            <div class="container">
+                <a class="navbar-brand fw-semibold" asp-page="/Index">Your Order We Deliver</a>
+                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#mainNav"
+                        aria-controls="mainNav" aria-expanded="false" aria-label="Toggle navigation">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+                <div class="collapse navbar-collapse" id="mainNav">
+                    <ul class="navbar-nav me-auto">
+                        <li class="nav-item"><a class="nav-link" asp-page="/Index">Home</a></li>
+                        @if (!User.IsDeliveryStaff())
+                        {
+                            <li class="nav-item"><a class="nav-link" asp-page="/Request/New">Request a delivery</a></li>
+                        }
+                        @if (!(User.Identity?.IsAuthenticated ?? false))
+                        {
+                            <li class="nav-item"><a class="nav-link" asp-page="/Quote/Respond">Respond to a quote</a></li>
+                        }
+                        <li class="nav-item"><a class="nav-link" asp-page="/Track/Index">Track a delivery</a></li>
+                        @if (User.IsOffice())
+                        {
+                            <li class="nav-item"><a class="nav-link" asp-page="/Office/Requests/Index">Requests &amp; quotes</a></li>
+                            <li class="nav-item"><a class="nav-link" asp-page="/Office/Allocation/Index">Allocation</a></li>
+                            <li class="nav-item"><a class="nav-link" asp-page="/Availability/Index">Availability</a></li>
+                        }
+                        @if (User.IsInRole(Roles.Manager))
+                        {
+                            <li class="nav-item"><a class="nav-link" asp-page="/Manager/Statistics">Statistics</a></li>
+                            <li class="nav-item"><a class="nav-link" asp-page="/Manager/Staff/Index">Staff records</a></li>
+                        }
+                        @if (User.IsDeliveryStaff())
+                        {
+                            <li class="nav-item"><a class="nav-link" asp-page="/Driver/Index">My deliveries</a></li>
+                            <li class="nav-item"><a class="nav-link" asp-page="/Availability/Index">My availability</a></li>
+                        }
+                    </ul>
+                    <ul class="navbar-nav">
+                        @if (User.Identity?.IsAuthenticated ?? false)
+                        {
+                            <li class="nav-item">
+                                <span class="navbar-text me-3">
+                                    @User.Identity.Name <span class="badge text-bg-light ms-1">@User.RoleLabel()</span>
+                                </span>
+                            </li>
+                            <li class="nav-item">
+                                <form method="post" asp-page="/Account/SignOut" class="d-inline">
+                                    <button type="submit" class="btn btn-outline-light btn-sm mt-1">Sign out</button>
+                                </form>
+                            </li>
+                        }
+                        else
+                        {
+                            <li class="nav-item"><a class="btn btn-outline-light btn-sm mt-1" asp-page="/Account/SignIn">Staff sign in</a></li>
+                        }
+                    </ul>
+                </div>
+            </div>
+        </nav>
+    </header>
+
+    <div class="container">
+        <main role="main" class="pb-5">
+            @if (TempData.Peek("StatusMessage") is string statusMessage)
+            {
+                <div class="alert alert-success alert-dismissible fade show" role="status">
+                    @statusMessage
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            }
+            @if (ViewData["NotFound"] is string notFound)
+            {
+                <div class="alert alert-warning" role="alert">@notFound</div>
+            }
+            @RenderBody()
+        </main>
+    </div>
+
+    <footer class="border-top py-3 text-muted small">
+        <div class="container d-flex justify-content-between">
+            <span>Your Order We Deliver &middot; Delivery Management System prototype (SWE30003 Assignment 3, Group 4)</span>
+            <span>Payments are recorded only; no real transactions are processed.</span>
+        </div>
+    </footer>
+
+    <script src="~/lib/jquery/dist/jquery.min.js"></script>
+    <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="~/js/site.js" asp-append-version="true"></script>
+    @await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>

@@ -1,0 +1,24 @@
+@{
+    var modelState = ViewContext.ModelState;
+    var pageErrors = modelState.TryGetValue(string.Empty, out var entry) ? entry.Errors : null;
+    bool hasFieldErrors = modelState.Any(pair => pair.Key.Length > 0 && pair.Value is { Errors.Count: > 0 });
+}
+@if (!modelState.IsValid)
+{
+    <div class="alert alert-danger" role="alert">
+        <strong>The information could not be accepted yet.</strong>
+        <ul class="mb-0 mt-2">
+            @if (pageErrors is not null)
+            {
+                foreach (var error in pageErrors)
+                {
+                    <li>@error.ErrorMessage</li>
+                }
+            }
+            @if (hasFieldErrors)
+            {
+                <li>Some fields need attention; they are highlighted below with what to change.</li>
+            }
+        </ul>
+    </div>
+}
