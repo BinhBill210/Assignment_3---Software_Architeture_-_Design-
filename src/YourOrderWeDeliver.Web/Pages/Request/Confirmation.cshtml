@@ -1,0 +1,28 @@
+@page
+@model YourOrderWeDeliver.Web.Pages.Request.ConfirmationModel
+@{
+    ViewData["Title"] = "Request received";
+    var request = Model.DeliveryRequest!;
+}
+
+<div class="card"><div class="card-body p-4">
+    <h1 class="h4 text-success">Your delivery request has been received</h1>
+    <p class="lead mb-1">Your reference number is</p>
+    <p class="display-6 fw-semibold">@request.Reference</p>
+    <p>
+        Thank you, @request.Customer.Name. Our office will prepare a quote with the delivery cost and estimated
+        pickup and delivery times. You can then accept or decline it.
+    </p>
+    <ul>
+        <li>Pickup: @request.PickupAddress</li>
+        <li>Destination: @request.DestinationAddress</li>
+        <li>Parcels: @request.Parcels.Count (total @request.TotalWeightKg kg)</li>
+        <li>Preferred pickup date: @DisplayFormat.Day(request.PreferredPickupDate)</li>
+    </ul>
+    <p class="text-muted small">Keep the reference number. You will need it together with your email address or phone number.</p>
+    <div class="d-flex gap-2">
+        <a class="btn btn-primary" asp-page="/Quote/Respond">Respond to a quote</a>
+        <a class="btn btn-outline-primary" asp-page="/Track/Index">Track a delivery</a>
+        <a class="btn btn-outline-secondary" asp-page="/Request/New">Request another delivery</a>
+    </div>
+</div></div>

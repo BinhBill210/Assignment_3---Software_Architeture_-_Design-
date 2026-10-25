@@ -1,0 +1,164 @@
+@page
+@model YourOrderWeDeliver.Web.Pages.Request.NewModel
+@{
+    ViewData["Title"] = "Request a delivery";
+    bool office = User.IsOffice();
+}
+
+<h1 class="h3 mb-1">@(Model.IsReviewing ? "Review your delivery request" : "Request a delivery")</h1>
+<p class="text-muted">
+    @if (Model.IsReviewing)
+    {
+        <text>Check the details below. Choose <strong>Edit details</strong> to change anything, or <strong>Submit request</strong> to send it to our office.</text>
+    }
+    else if (office)
+    {
+        <text>Recording a request on behalf of a customer. Fields marked * are required.</text>
+    }
+    else
+    {
+        <text>We collect and deliver within @Model.ServiceAreaName. Fields marked * are required.</text>
+    }
+</p>
+
+<partial name="_ErrorSummary" />
+
+<form method="post" novalidate>
+    @if (Model.IsReviewing)
+    {
+        <div class="card mb-3"><div class="card-body">
+            <div class="row">
+                <div class="col-md-4">
+                    <h2 class="h6">Customer</h2>
+                    <p class="mb-0">@Model.Input.CustomerName<br />@Model.Input.CustomerEmail<br />@Model.Input.CustomerPhone</p>
+                </div>
+                <div class="col-md-4">
+                    <h2 class="h6">Pickup</h2>
+                    <p class="mb-0">@Model.Input.Pickup.Street<br />@Model.Input.Pickup.Suburb @Model.Input.Pickup.Postcode</p>
+                    <p class="small text-muted">Preferred date: @DisplayFormat.Day(DateOnly.FromDateTime(Model.Input.PreferredPickupDate!.Value))</p>
+                </div>
+                <div class="col-md-4">
+                    <h2 class="h6">Destination</h2>
+                    <p class="mb-0">@Model.Input.Destination.Street<br />@Model.Input.Destination.Suburb @Model.Input.Destination.Postcode</p>
+                </div>
+            </div>
+            <h2 class="h6 mt-3">Parcels (@Model.Input.Parcels.Count)</h2>
+            <table class="table table-sm mb-2">
+                <thead><tr><th>#</th><th>Description</th><th>Weight</th><th>Fragile</th></tr></thead>
+                <tbody>
+                    @for (int i = 0; i < Model.Input.Parcels.Count; i++)
+                    {
+                        <tr>
+                            <td>@(i + 1)</td>
+                            <td>@Model.Input.Parcels[i].Description</td>
+                            <td>@Model.Input.Parcels[i].WeightKg kg</td>
+                            <td>@(Model.Input.Parcels[i].IsFragile ? "Yes" : "No")</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+            @if (!string.IsNullOrWhiteSpace(Model.Input.SpecialInstructions))
+            {
+                <p class="mb-0"><strong>Special instructions:</strong> @Model.Input.SpecialInstructions</p>
+            }
+        </div></div>
+
+        <input type="hidden" asp-for="Input.CustomerName" />
+        <input type="hidden" asp-for="Input.CustomerEmail" />
+        <input type="hidden" asp-for="Input.CustomerPhone" />
+        <input type="hidden" asp-for="Input.Pickup.Street" />
+        <input type="hidden" asp-for="Input.Pickup.Suburb" />
+        <input type="hidden" asp-for="Input.Pickup.Postcode" />
+        <input type="hidden" asp-for="Input.Destination.Street" />
+        <input type="hidden" asp-for="Input.Destination.Suburb" />
+        <input type="hidden" asp-for="Input.Destination.Postcode" />
+        <input type="hidden" asp-for="Input.PreferredPickupDate" value="@Model.Input.PreferredPickupDate?.ToString("yyyy-MM-dd")" />
+        <input type="hidden" asp-for="Input.SpecialInstructions" />
+        @for (int i = 0; i < Model.Input.Parcels.Count; i++)
+        {
+            <input type="hidden" asp-for="Input.Parcels[i].Description" />
+            <input type="hidden" asp-for="Input.Parcels[i].WeightKg" />
+            <input type="hidden" asp-for="Input.Parcels[i].IsFragile" />
+        }
+
+        <div class="d-flex gap-2">
+            <button type="submit" class="btn btn-outline-secondary" asp-page-handler="Edit">Edit details</button>
+            <button type="submit" class="btn btn-success" asp-page-handler="Submit">Submit request</button>
+        </div>
+    }
+    else
+    {
+        <div class="card mb-3"><div class="card-body">
+            <h2 class="h6">1. Customer information</h2>
+            <div class="row g-2">
+                <div class="col-md-4">
+                    <label asp-for="Input.CustomerName" class="form-label"><span class="required">Full name</span></label>
+                    <input asp-for="Input.CustomerName" class="form-control" autocomplete="name" />
+                    <span asp-validation-for="Input.CustomerName" class="field-validation-error"></span>
+                </div>
+                <div class="col-md-4">
+                    <label asp-for="Input.CustomerEmail" class="form-label"><span class="required">Email address</span></label>
+                    <input asp-for="Input.CustomerEmail" class="form-control" type="email" autocomplete="email" />
+                    <span asp-validation-for="Input.CustomerEmail" class="field-validation-error"></span>
+                </div>
+                <div class="col-md-4">
+                    <label asp-for="Input.CustomerPhone" class="form-label"><span class="required">Phone number</span></label>
+                    <input asp-for="Input.CustomerPhone" class="form-control" type="tel" placeholder="e.g. 0412 345 678" />
+                    <span asp-validation-for="Input.CustomerPhone" class="field-validation-error"></span>
+                </div>
+            </div>
+        </div></div>
+
+        <div class="card mb-3"><div class="card-body">
+            <h2 class="h6">2. Pickup and destination</h2>
+            <partial name="_AddressFields" for="Input.Pickup" view-data='new ViewDataDictionary(ViewData) { ["Legend"] = "Pickup address" }' />
+            <partial name="_AddressFields" for="Input.Destination" view-data='new ViewDataDictionary(ViewData) { ["Legend"] = "Destination address" }' />
+            <div class="row g-2">
+                <div class="col-md-4">
+                    <label asp-for="Input.PreferredPickupDate" class="form-label"><span class="required">Preferred pickup date</span></label>
+                    <input asp-for="Input.PreferredPickupDate" class="form-control" type="date" />
+                    <span asp-validation-for="Input.PreferredPickupDate" class="field-validation-error"></span>
+                </div>
+                <div class="col-md-8">
+                    <label asp-for="Input.SpecialInstructions" class="form-label">Special instructions (optional)</label>
+                    <input asp-for="Input.SpecialInstructions" class="form-control" placeholder="e.g. Leave at reception, call on arrival" />
+                    <span asp-validation-for="Input.SpecialInstructions" class="field-validation-error"></span>
+                </div>
+            </div>
+        </div></div>
+
+        <div class="card mb-3"><div class="card-body">
+            <h2 class="h6">3. Parcels</h2>
+            <p class="small text-muted">Add one row for each parcel. Maximum @Parcel.MaxWeightKg kg per parcel and @DeliveryRequest.MaxParcels parcels per request.</p>
+            @for (int i = 0; i < Model.Input.Parcels.Count; i++)
+            {
+                <div class="row g-2 align-items-end mb-2 border-bottom pb-2">
+                    <div class="col-md-1 fw-semibold">#@(i + 1)</div>
+                    <div class="col-md-5">
+                        <label asp-for="Input.Parcels[i].Description" class="form-label"><span class="required">Contents</span></label>
+                        <input asp-for="Input.Parcels[i].Description" class="form-control" placeholder="e.g. Documents, small box of books" />
+                        <span asp-validation-for="Input.Parcels[i].Description" class="field-validation-error"></span>
+                    </div>
+                    <div class="col-md-2">
+                        <label asp-for="Input.Parcels[i].WeightKg" class="form-label"><span class="required">Weight (kg)</span></label>
+                        <input asp-for="Input.Parcels[i].WeightKg" class="form-control" type="number" step="0.1" min="0.1" max="30" />
+                        <span asp-validation-for="Input.Parcels[i].WeightKg" class="field-validation-error"></span>
+                    </div>
+                    <div class="col-md-2">
+                        <div class="form-check mb-2">
+                            <input asp-for="Input.Parcels[i].IsFragile" class="form-check-input" />
+                            <label asp-for="Input.Parcels[i].IsFragile" class="form-check-label">Fragile</label>
+                        </div>
+                    </div>
+                    <div class="col-md-2 text-end">
+                        <button type="submit" class="btn btn-outline-danger btn-sm" asp-page-handler="RemoveParcel" asp-route-index="@i"
+                                disabled="@(Model.Input.Parcels.Count == 1)">Remove</button>
+                    </div>
+                </div>
+            }
+            <button type="submit" class="btn btn-outline-primary btn-sm" asp-page-handler="AddParcel">+ Add another parcel</button>
+        </div></div>
+
+        <button type="submit" class="btn btn-primary" asp-page-handler="Review">Review request</button>
+    }
+</form>
