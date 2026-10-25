@@ -1,0 +1,35 @@
+@page
+@model YourOrderWeDeliver.Web.Pages.Account.SignInModel
+@{
+    ViewData["Title"] = "Staff sign in";
+}
+
+<div class="row justify-content-center">
+    <div class="col-md-6 col-lg-5">
+        <div class="card"><div class="card-body p-4">
+            <h1 class="h4 mb-3">Staff sign in</h1>
+            <partial name="_ErrorSummary" />
+            <form method="post" novalidate>
+                <input type="hidden" asp-for="ReturnUrl" />
+                <div class="mb-3">
+                    <label asp-for="Input.Username" class="form-label"><span class="required">Username or staff ID</span></label>
+                    <input asp-for="Input.Username" class="form-control" autocomplete="username" />
+                    <span asp-validation-for="Input.Username" class="field-validation-error"></span>
+                </div>
+                <div class="mb-3">
+                    <label asp-for="Input.Password" class="form-label"><span class="required">Password</span></label>
+                    <input asp-for="Input.Password" class="form-control" autocomplete="current-password" />
+                    <span asp-validation-for="Input.Password" class="field-validation-error"></span>
+                </div>
+                <button type="submit" class="btn btn-primary w-100">Sign in</button>
+            </form>
+            <hr />
+            <p class="small text-muted mb-1">Prototype accounts:</p>
+            <ul class="small text-muted mb-0">
+                <li>Office staff: <code>office</code> / <code>office123</code></li>
+                <li>Manager: <code>manager</code> / <code>manager123</code></li>
+                <li>Delivery staff: staff ID such as <code>DS-001</code> / <code>driver123</code></li>
+            </ul>
+        </div></div>
+    </div>
+</div>
