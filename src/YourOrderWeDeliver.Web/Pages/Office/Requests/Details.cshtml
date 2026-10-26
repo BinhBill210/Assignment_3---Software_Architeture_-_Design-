@@ -1,0 +1,212 @@
+@page "{reference?}"
+@model YourOrderWeDeliver.Web.Pages.Office.Requests.DetailsModel
+@{
+    ViewData["Title"] = $"Request {Model.Reference}";
+    var request = Model.DeliveryRequest;
+    var quote = request?.Quote;
+}
+
+<p><a asp-page="Index">&larr; All requests</a></p>
+
+@if (request is not null)
+{
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h1 class="h3 mb-0">Request @request.Reference</h1>
+        <span class="badge fs-6 @DisplayText.BadgeClass(request.Status)">@DisplayText.Label(request.Status)</span>
+    </div>
+
+    <partial name="_ErrorSummary" />
+
+    <div class="card mb-3"><div class="card-body">
+        <div class="d-flex justify-content-between">
+            <h2 class="h5">1. Review the request</h2>
+            @if (request.Status == RequestStatus.Submitted && !Model.IsEditingDetails)
+            {
+                <form method="post" novalidate>
+                    <input type="hidden" asp-for="Reference" />
+                    <button type="submit" class="btn btn-sm btn-outline-secondary" asp-page-handler="EditDetails">Edit request details</button>
+                </form>
+            }
+        </div>
+
+        @if (Model.IsEditingDetails)
+        {
+            <form method="post" novalidate>
+                <input type="hidden" asp-for="Reference" />
+                <partial name="_AddressFields" for="Details.Pickup" view-data='new ViewDataDictionary(ViewData) { ["Legend"] = "Pickup address" }' />
+                <partial name="_AddressFields" for="Details.Destination" view-data='new ViewDataDictionary(ViewData) { ["Legend"] = "Destination address" }' />
+                <div class="row g-2 mb-3">
+                    <div class="col-md-4">
+                        <label asp-for="Details.PreferredPickupDate" class="form-label"><span class="required">Preferred pickup date</span></label>
+                        <input asp-for="Details.PreferredPickupDate" class="form-control" type="date" />
+                        <span asp-validation-for="Details.PreferredPickupDate" class="field-validation-error"></span>
+                    </div>
+                    <div class="col-md-8">
+                        <label asp-for="Details.SpecialInstructions" class="form-label">Special instructions (optional)</label>
+                        <input asp-for="Details.SpecialInstructions" class="form-control" />
+                        <span asp-validation-for="Details.SpecialInstructions" class="field-validation-error"></span>
+                    </div>
+                </div>
+                <button type="submit" class="btn btn-primary" asp-page-handler="SaveDetails">Save changes</button>
+                <button type="submit" class="btn btn-outline-secondary" asp-page-handler="CancelDetails">Cancel</button>
+            </form>
+        }
+        else
+        {
+            <div class="row">
+                <div class="col-md-4">
+                    <h3 class="h6">Customer</h3>
+                    <p class="mb-1">@request.Customer.Name<br />@request.Customer.Email<br />@request.Customer.Phone</p>
+                    <p class="small text-muted">@request.Customer.Id &middot; @request.Customer.Requests.Count request(s) in total</p>
+                </div>
+                <div class="col-md-4">
+                    <h3 class="h6">Pickup</h3>
+                    <p class="mb-1">@request.PickupAddress</p>
+                    <p class="small text-muted">Preferred date: @DisplayFormat.Day(request.PreferredPickupDate)</p>
+                </div>
+                <div class="col-md-4">
+                    <h3 class="h6">Destination</h3>
+                    <p class="mb-1">@request.DestinationAddress</p>
+                    <p class="small text-muted">Recorded @DisplayFormat.DateAndTime(request.SubmittedAt) &middot; @DisplayText.Label(request.Channel)</p>
+                </div>
+            </div>
+            @if (request.SpecialInstructions is not null)
+            {
+                <p><strong>Special instructions:</strong> @request.SpecialInstructions</p>
+            }
+            <table class="table table-sm mb-0">
+                <thead><tr><th>Parcel</th><th>Contents</th><th>Weight</th><th>Fragile</th></tr></thead>
+                <tbody>
+                    @foreach (var parcel in request.Parcels)
+                    {
+                        <tr><td>@parcel.Id</td><td>@parcel.Description</td><td>@parcel.WeightKg kg</td><td>@(parcel.IsFragile ? "Yes" : "No")</td></tr>
+                    }
+                </tbody>
+                <tfoot><tr><th colspan="2">Total</th><th>@request.TotalWeightKg kg</th><th></th></tr></tfoot>
+            </table>
+        }
+    </div></div>
+
+    @if (quote is not null)
+    {
+        <div class="card mb-3"><div class="card-body">
+            <h2 class="h5">Current quote <small class="text-muted">(revision @quote.Revision)</small></h2>
+            <table class="table table-sm w-auto mb-2">
+                <tr><th>Cost</th><td>@DisplayFormat.Money(quote.Cost)</td></tr>
+                <tr><th>Pickup &ndash; delivery</th><td>@DisplayFormat.Window(quote.Window)</td></tr>
+                <tr><th>Prepared</th><td>@DisplayFormat.DateAndTime(quote.PreparedAt)</td></tr>
+                <tr><th>Valid until</th><td>@DisplayFormat.DateAndTime(quote.ValidUntil)@(Model.QuoteExpired ? " (expired)" : string.Empty)</td></tr>
+                <tr><th>Customer response</th><td>@DisplayText.Label(quote.Response)@(quote.RespondedAt is { } at ? $" on {DisplayFormat.DateAndTime(at)}" : string.Empty)</td></tr>
+            </table>
+
+            @if (quote.Response == QuoteResponse.Pending)
+            {
+                <form method="post" novalidate>
+                    <input type="hidden" asp-for="Reference" />
+                    @if (Model.PendingResponse is bool accept)
+                    {
+                        <div class="alert @(accept ? "alert-success" : "alert-warning")">
+                            Confirm that <strong>@request.Customer.Name</strong> told you they
+                            <strong>@(accept ? "accept" : "decline")</strong> this quote.
+                        </div>
+                        <input type="hidden" name="accept" value="@accept.ToString()" />
+                        <button type="submit" class="btn @(accept ? "btn-success" : "btn-danger")" asp-page-handler="ConfirmResponse">
+                            Confirm: customer @(accept ? "accepts" : "declines")
+                        </button>
+                        <button type="submit" class="btn btn-outline-secondary" asp-page-handler="EditQuote">Go back</button>
+                    }
+                    else
+                    {
+                        <p class="small text-muted mb-2">If the customer gives their answer by phone or in person, record it here.</p>
+                        <button type="submit" class="btn btn-sm btn-success" asp-page-handler="ChooseResponse" asp-route-accept="true">Customer accepts</button>
+                        <button type="submit" class="btn btn-sm btn-outline-danger" asp-page-handler="ChooseResponse" asp-route-accept="false">Customer declines</button>
+                    }
+                </form>
+            }
+            else if (request.Delivery is { } delivery)
+            {
+                <p class="mb-0">
+                    Delivery <strong>@delivery.Id</strong>:
+                    <span class="badge @DisplayText.BadgeClass(delivery.Status)">@DisplayText.Label(delivery.Status)</span>
+                    &middot; <a asp-page="/Track/Index" asp-route-reference="@delivery.Id">View tracking</a>
+                    @if (delivery.Status is DeliveryStatus.AwaitingAllocation or DeliveryStatus.Allocated)
+                    {
+                        <text>&middot; <a asp-page="/Office/Allocation/Allocate" asp-route-id="@delivery.Id">Allocate / reassign staff</a></text>
+                    }
+                </p>
+            }
+        </div></div>
+    }
+
+    @if (Model.CanQuote && !Model.IsEditingDetails && Model.PendingResponse is null)
+    {
+        <div class="card mb-3"><div class="card-body">
+            <h2 class="h5">@(quote is null ? "2. Prepare the quote" : "2. Revise the quote")</h2>
+            @if (quote is not null)
+            {
+                <p class="small text-muted">The customer has not responded yet, so the cost or times can still be changed (A1 T2 variant 4a).</p>
+            }
+
+            <form method="post" novalidate>
+                <input type="hidden" asp-for="Reference" />
+                @if (Model.IsReviewingQuote)
+                {
+                    <div class="alert alert-info">
+                        <strong>Check the quote before issuing it.</strong>
+                        <ul class="mb-0 mt-2">
+                            <li>Cost: <strong>@DisplayFormat.Money(Model.Quote.Cost!.Value)</strong></li>
+                            <li>Estimated pickup: <strong>@DisplayFormat.DateAndTime(Model.Quote.EstimatedPickup!.Value)</strong></li>
+                            <li>Estimated delivery: <strong>@DisplayFormat.DateAndTime(Model.Quote.EstimatedDelivery!.Value)</strong></li>
+                            <li>Staff available for this time: @string.Join(", ", Model.StaffForEnteredWindow.Select(s => s.Name))</li>
+                        </ul>
+                    </div>
+                    <input type="hidden" asp-for="Quote.Cost" />
+                    <input type="hidden" asp-for="Quote.EstimatedPickup" />
+                    <input type="hidden" asp-for="Quote.EstimatedDelivery" />
+                    <button type="submit" class="btn btn-outline-secondary" asp-page-handler="EditQuote">Change quote</button>
+                    <button type="submit" class="btn btn-success" asp-page-handler="IssueQuote">@(quote is null ? "Issue quote to customer" : "Issue revised quote")</button>
+                }
+                else
+                {
+                    <div class="row g-2">
+                        <div class="col-md-3">
+                            <label asp-for="Quote.Cost" class="form-label"><span class="required">Delivery cost ($)</span></label>
+                            <input asp-for="Quote.Cost" class="form-control" type="number" step="0.01" min="0.01" max="5000" />
+                            <span asp-validation-for="Quote.Cost" class="field-validation-error"></span>
+                            <div class="form-text">Suggested: @DisplayFormat.Money(Model.SuggestedCost)</div>
+                        </div>
+                        <div class="col-md-4">
+                            <label asp-for="Quote.EstimatedPickup" class="form-label"><span class="required">Estimated pickup</span></label>
+                            <input asp-for="Quote.EstimatedPickup" class="form-control" type="datetime-local" />
+                            <span asp-validation-for="Quote.EstimatedPickup" class="field-validation-error"></span>
+                        </div>
+                        <div class="col-md-4">
+                            <label asp-for="Quote.EstimatedDelivery" class="form-label"><span class="required">Estimated delivery</span></label>
+                            <input asp-for="Quote.EstimatedDelivery" class="form-control" type="datetime-local" />
+                            <span asp-validation-for="Quote.EstimatedDelivery" class="field-validation-error"></span>
+                        </div>
+                    </div>
+                    <p class="small text-muted mt-2 mb-2">Pricing guide: @Model.PricingDescription. Delivery must be within 12 hours of pickup.</p>
+
+                    <div class="border rounded p-2 mb-3 bg-light small">
+                        @if (Model.SuggestedWindow is { } window)
+                        {
+                            <text>Earliest time with available staff from the preferred date: <strong>@DisplayFormat.Window(window)</strong>.</text>
+                            <button type="submit" class="btn btn-link btn-sm p-0 ms-1 align-baseline" asp-page-handler="UseSuggestion">Use this time</button>
+                        }
+                        else
+                        {
+                            <text>No staff have availability recorded on or after the preferred date. <a asp-page="/Availability/Index">Update availability</a> first.</text>
+                        }
+                        @if (Model.StaffForEnteredWindow.Count > 0)
+                        {
+                            <br /><text>Available for the times entered: @string.Join(", ", Model.StaffForEnteredWindow.Select(s => s.Name)).</text>
+                        }
+                    </div>
+
+                    <button type="submit" class="btn btn-primary" asp-page-handler="ReviewQuote">Review quote</button>
+                }
+            </form>
+        </div></div>
+    }
+}
