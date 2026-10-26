@@ -1,0 +1,76 @@
+@page
+@model YourOrderWeDeliver.Web.Pages.Office.Allocation.IndexModel
+@{
+    ViewData["Title"] = "Staff allocation";
+}
+
+<h1 class="h3">Staff allocation</h1>
+<p class="text-muted">Accepted deliveries need a delivery staff member who is active and available for the whole pickup-to-delivery window.</p>
+
+<div class="card mb-3"><div class="card-body">
+    <h2 class="h5">Waiting for allocation (@Model.AwaitingAllocation.Count)</h2>
+    @if (Model.AwaitingAllocation.Count == 0)
+    {
+        <p class="text-muted mb-0">Every accepted delivery has a staff member.</p>
+    }
+    else
+    {
+        <table class="table table-hover align-middle mb-0">
+            <thead><tr><th>Delivery</th><th>Window</th><th>Pickup &rarr; destination</th><th>Parcels</th><th></th></tr></thead>
+            <tbody>
+                @foreach (var delivery in Model.AwaitingAllocation)
+                {
+                    <tr>
+                        <td class="fw-semibold">@delivery.Id<br /><span class="small text-muted">@delivery.Request.Reference</span></td>
+                        <td>@DisplayFormat.Window(delivery.Window)</td>
+                        <td class="small">@delivery.Request.PickupAddress.Suburb &rarr; @delivery.Request.DestinationAddress.Suburb</td>
+                        <td>@delivery.Parcels.Count (@delivery.Request.TotalWeightKg kg)</td>
+                        <td class="text-end"><a class="btn btn-sm btn-primary" asp-page="Allocate" asp-route-id="@delivery.Id">Allocate</a></td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    }
+</div></div>
+
+<div class="card mb-3"><div class="card-body">
+    <h2 class="h5">Allocated, not yet picked up (@Model.AllocatedNotPickedUp.Count)</h2>
+    @if (Model.AllocatedNotPickedUp.Count == 0)
+    {
+        <p class="text-muted mb-0">No deliveries are waiting for pickup.</p>
+    }
+    else
+    {
+        <table class="table table-hover align-middle mb-0">
+            <thead><tr><th>Delivery</th><th>Window</th><th>Staff member</th><th>Collected</th><th></th></tr></thead>
+            <tbody>
+                @foreach (var delivery in Model.AllocatedNotPickedUp)
+                {
+                    <tr>
+                        <td class="fw-semibold">@delivery.Id</td>
+                        <td>@DisplayFormat.Window(delivery.Window)</td>
+                        <td>@delivery.AllocatedStaff?.Name (@delivery.AllocatedStaff?.Id)</td>
+                        <td>@delivery.CollectedParcelCount of @delivery.Parcels.Count</td>
+                        <td class="text-end"><a class="btn btn-sm btn-outline-primary" asp-page="Allocate" asp-route-id="@delivery.Id">Reassign</a></td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    }
+</div></div>
+
+@if (Model.RecentReassignments.Count > 0)
+{
+    <div class="card"><div class="card-body">
+        <h2 class="h5">Recent automatic reassignments</h2>
+        <p class="small text-muted">Made by the system when a staff member's availability changed or they left the business.</p>
+        <ul class="mb-0">
+            @foreach (var record in Model.RecentReassignments)
+            {
+                <li class="@(record.WasReassigned ? string.Empty : "text-danger")">
+                    <span class="small text-muted">@DisplayFormat.DateAndTime(record.At)</span> &middot; @record.Summary
+                </li>
+            }
+        </ul>
+    </div></div>
+}

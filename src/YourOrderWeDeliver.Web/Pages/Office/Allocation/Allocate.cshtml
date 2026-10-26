@@ -1,0 +1,99 @@
+@page "{id?}"
+@model YourOrderWeDeliver.Web.Pages.Office.Allocation.AllocateModel
+@{
+    ViewData["Title"] = $"Allocate {Model.Id}";
+    var delivery = Model.Delivery;
+}
+
+<p><a asp-page="Index">&larr; Allocation list</a></p>
+
+@if (delivery is not null)
+{
+    var request = delivery.Request;
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h1 class="h3 mb-0">@(delivery.AllocatedStaff is null ? "Allocate" : "Reassign") delivery @delivery.Id</h1>
+        <span class="badge fs-6 @DisplayText.BadgeClass(delivery.Status)">@DisplayText.Label(delivery.Status)</span>
+    </div>
+
+    <partial name="_ErrorSummary" />
+
+    <div class="card mb-3"><div class="card-body">
+        <h2 class="h5">Delivery requirements</h2>
+        <div class="row">
+            <div class="col-md-4"><strong>Window</strong><br />@DisplayFormat.Window(delivery.Window)</div>
+            <div class="col-md-4"><strong>Pickup</strong><br />@request.PickupAddress</div>
+            <div class="col-md-4"><strong>Destination</strong><br />@request.DestinationAddress</div>
+        </div>
+        <p class="mt-2 mb-0 small">
+            @request.Parcels.Count parcel(s), @request.TotalWeightKg kg in total@(request.Parcels.Any(p => p.IsFragile) ? ", includes fragile items" : string.Empty).
+            @if (request.SpecialInstructions is not null)
+            {
+                <br /><text>Instructions: @request.SpecialInstructions</text>
+            }
+        </p>
+        @if (delivery.AllocatedStaff is { } current)
+        {
+            <p class="mt-2 mb-0">Currently allocated to <strong>@current.Name</strong> (@current.Id).</p>
+        }
+    </div></div>
+
+    @if (!Model.CanAllocate)
+    {
+        <div class="alert alert-secondary">This delivery has been picked up, so its staff member can no longer be changed.</div>
+    }
+    else
+    {
+        <form method="post" novalidate class="card"><div class="card-body">
+            <input type="hidden" asp-for="Id" />
+            @if (Model.IsConfirming && Model.Chosen is { } chosen)
+            {
+                <input type="hidden" asp-for="StaffId" />
+                <div class="alert alert-info">
+                    Confirm @(delivery.AllocatedStaff is null ? "allocation" : "reassignment") of delivery <strong>@delivery.Id</strong>
+                    (@DisplayFormat.Window(delivery.Window)) to <strong>@chosen.Name</strong> (@chosen.Id, @chosen.Phone).
+                </div>
+                <button type="submit" class="btn btn-success" asp-page-handler="Confirm">Confirm allocation</button>
+                <button type="submit" class="btn btn-outline-secondary" asp-page-handler="Cancel">Choose someone else</button>
+            }
+            else
+            {
+                <h2 class="h5">Delivery staff availability for this window</h2>
+                @if (!Model.Options.Any(option => option.IsSuitable))
+                {
+                    <div class="alert alert-warning">
+                        No active staff member is available for the whole window. Ask a staff member to
+                        <a asp-page="/Availability/Index">add availability</a>, then try again.
+                    </div>
+                }
+                <span asp-validation-for="StaffId" class="field-validation-error d-block mb-2"></span>
+                <table class="table align-middle">
+                    <thead><tr><th></th><th>Staff member</th><th>Current deliveries</th><th>Suitability</th></tr></thead>
+                    <tbody>
+                        @foreach (var option in Model.Options)
+                        {
+                            <tr class="@(option.IsSuitable ? string.Empty : "text-muted")">
+                                <td>
+                                    <input class="form-check-input" type="radio" name="StaffId" id="staff-@option.Staff.Id" value="@option.Staff.Id"
+                                           checked="@(Model.StaffId == option.Staff.Id)" disabled="@(!option.IsSuitable)" />
+                                </td>
+                                <td><label for="staff-@option.Staff.Id">@option.Staff.Name <span class="small text-muted">@option.Staff.Id</span></label></td>
+                                <td>@option.Staff.CurrentDeliveries.Count()</td>
+                                <td>
+                                    @if (option.IsSuitable)
+                                    {
+                                        <span class="badge text-bg-success">Available</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="small">Not available: @option.Unsuitability</span>
+                                    }
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+                <button type="submit" class="btn btn-primary" asp-page-handler="Choose">Select staff member</button>
+            }
+        </div></form>
+    }
+}
