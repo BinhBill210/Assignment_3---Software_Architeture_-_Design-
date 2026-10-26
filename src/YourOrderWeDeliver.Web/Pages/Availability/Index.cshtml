@@ -1,0 +1,136 @@
+@page
+@model YourOrderWeDeliver.Web.Pages.Availability.IndexModel
+@{
+    ViewData["Title"] = Model.CanChooseStaff ? "Staff availability" : "My availability";
+    var staff = Model.Staff;
+}
+
+<h1 class="h3">@ViewData["Title"]</h1>
+<p class="text-muted">Staff can only be allocated to deliveries that fall completely inside one of their availability periods.</p>
+
+@if (Model.CanChooseStaff)
+{
+    <form method="get" class="row g-2 align-items-end mb-3">
+        <div class="col-md-5">
+            <label asp-for="StaffId" class="form-label">Delivery staff member</label>
+            <select asp-for="StaffId" asp-items="Model.StaffChoices" class="form-select" onchange="this.form.submit()"></select>
+        </div>
+        <div class="col-md-2"><button type="submit" class="btn btn-outline-secondary">Show</button></div>
+    </form>
+}
+
+<partial name="_ErrorSummary" />
+
+@if (ViewData["Outcome"] is string outcome)
+{
+    <div class="alert alert-warning">
+        @outcome
+        <ul class="mb-0 mt-2">
+            @foreach (var record in Model.Outcomes)
+            {
+                <li>@record.Summary</li>
+            }
+        </ul>
+    </div>
+}
+
+@if (staff is not null)
+{
+    <div class="row g-3">
+        <div class="col-lg-7">
+            <div class="card"><div class="card-body">
+                <h2 class="h5">Availability of @staff.Name</h2>
+                @if (staff.Availability.Periods.Count == 0)
+                {
+                    <p class="text-muted mb-0">No availability recorded. Add a period so this staff member can be scheduled.</p>
+                }
+                else
+                {
+                    <table class="table table-sm align-middle mb-0">
+                        <thead><tr><th>Period</th><th>Hours</th><th></th></tr></thead>
+                        <tbody>
+                            @foreach (var period in staff.Availability.Periods)
+                            {
+                                bool pending = Model.PendingRemoval?.Id == period.Id;
+                                <tr class="@(pending ? "table-warning" : string.Empty)">
+                                    <td>@DisplayFormat.Window(period.Window)</td>
+                                    <td>@period.Window.Duration.TotalHours.ToString("0.#", DisplayFormat.DisplayCulture)</td>
+                                    <td class="text-end">
+                                        <form method="post" novalidate class="d-inline">
+                                            <input type="hidden" asp-for="StaffId" />
+                                            <input type="hidden" name="PeriodId" value="@period.Id" />
+                                            <button type="submit" class="btn btn-sm btn-outline-danger" asp-page-handler="ConfirmRemove">Remove</button>
+                                        </form>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                }
+            </div></div>
+        </div>
+
+        <div class="col-lg-5">
+            @if (Model.PendingRemoval is { } removal)
+            {
+                <div class="card border-warning mb-3"><div class="card-body">
+                    <h2 class="h6">Remove @DisplayFormat.Window(removal.Window)?</h2>
+                    @if (Model.AffectedByRemoval.Count > 0)
+                    {
+                        <p class="small mb-2">@staff.Name is allocated to these deliveries in that period. They will be reassigned to another available staff member, or returned to the allocation list if nobody is free:</p>
+                        <ul class="small">
+                            @foreach (var delivery in Model.AffectedByRemoval)
+                            {
+                                <li>@delivery.Id &middot; @DisplayFormat.Window(delivery.Window)</li>
+                            }
+                        </ul>
+                    }
+                    else
+                    {
+                        <p class="small mb-2">No allocated deliveries are affected.</p>
+                    }
+                    <form method="post" novalidate>
+                        <input type="hidden" asp-for="StaffId" />
+                        <input type="hidden" asp-for="PeriodId" />
+                        <button type="submit" class="btn btn-danger btn-sm" asp-page-handler="Remove">Confirm removal</button>
+                        <button type="submit" class="btn btn-outline-secondary btn-sm" asp-page-handler="Cancel">Keep this period</button>
+                    </form>
+                </div></div>
+            }
+
+            <form method="post" novalidate class="card mb-3"><div class="card-body">
+                <h2 class="h6">Add an availability period</h2>
+                <input type="hidden" asp-for="StaffId" />
+                <div class="mb-2">
+                    <label asp-for="Period.Start" class="form-label"><span class="required">Available from</span></label>
+                    <input asp-for="Period.Start" class="form-control" type="datetime-local" />
+                    <span asp-validation-for="Period.Start" class="field-validation-error"></span>
+                </div>
+                <div class="mb-2">
+                    <label asp-for="Period.End" class="form-label"><span class="required">Available until</span></label>
+                    <input asp-for="Period.End" class="form-control" type="datetime-local" />
+                    <span asp-validation-for="Period.End" class="field-validation-error"></span>
+                </div>
+                <p class="form-text">At most 14 hours per period; periods may not overlap.</p>
+                <button type="submit" class="btn btn-primary" asp-page-handler="Add">Add period</button>
+            </div></form>
+
+            <div class="card"><div class="card-body">
+                <h2 class="h6">Current allocations</h2>
+                @if (!staff.CurrentDeliveries.Any())
+                {
+                    <p class="small text-muted mb-0">None.</p>
+                }
+                else
+                {
+                    <ul class="small mb-0">
+                        @foreach (var delivery in staff.CurrentDeliveries)
+                        {
+                            <li>@delivery.Id &middot; @DisplayFormat.Window(delivery.Window) &middot; @DisplayText.Label(delivery.Status)</li>
+                        }
+                    </ul>
+                }
+            </div></div>
+        </div>
+    </div>
+}
