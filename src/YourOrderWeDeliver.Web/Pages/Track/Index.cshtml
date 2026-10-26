@@ -1,0 +1,173 @@
+@page
+@model YourOrderWeDeliver.Web.Pages.Track.IndexModel
+@{
+    ViewData["Title"] = "Track a delivery";
+    var request = Model.DeliveryRequest;
+    var quote = request?.Quote;
+    var delivery = request?.Delivery;
+}
+
+<h1 class="h3">Track a delivery</h1>
+<p class="text-muted">
+    @if (Model.IsStaffView)
+    {
+        <text>Enter a request reference (REQ-…) or delivery number (DEL-…) to see its full record.</text>
+    }
+    else
+    {
+        <text>Enter your reference number and the email address or phone number you used on the request.</text>
+    }
+</p>
+
+<partial name="_ErrorSummary" />
+
+<form method="post" novalidate class="card mb-3"><div class="card-body">
+    <div class="row g-2 align-items-end">
+        <div class="col-md-4">
+            <label asp-for="Reference" class="form-label"><span class="required">Reference or delivery number</span></label>
+            <input asp-for="Reference" class="form-control" placeholder="REQ-100001 or DEL-000001" />
+            <span asp-validation-for="Reference" class="field-validation-error"></span>
+        </div>
+        @if (!Model.IsStaffView)
+        {
+            <div class="col-md-5">
+                <label asp-for="Contact" class="form-label"><span class="required">Email or phone number</span></label>
+                <input asp-for="Contact" class="form-control" />
+                <span asp-validation-for="Contact" class="field-validation-error"></span>
+            </div>
+        }
+        <div class="col-md-3">
+            <button type="submit" class="btn btn-primary w-100">Track</button>
+        </div>
+    </div>
+</div></form>
+
+@if (request is not null)
+{
+    <div class="card mb-3"><div class="card-body">
+        <div class="d-flex justify-content-between flex-wrap gap-2">
+            <h2 class="h5 mb-0">
+                Request @request.Reference
+                @if (delivery is not null)
+                {
+                    <small class="text-muted">&middot; Delivery @delivery.Id</small>
+                }
+            </h2>
+            <div>
+                @if (delivery is not null)
+                {
+                    <span class="badge @DisplayText.BadgeClass(delivery.Status)">@DisplayText.Label(delivery.Status)</span>
+                }
+                else
+                {
+                    <span class="badge @DisplayText.BadgeClass(request.Status)">@DisplayText.Label(request.Status)</span>
+                }
+            </div>
+        </div>
+        <p class="mt-2 mb-1">From <strong>@request.PickupAddress</strong> to <strong>@request.DestinationAddress</strong></p>
+        @if (Model.IsStaffView)
+        {
+            <p class="small text-muted mb-1">
+                Customer: @request.Customer.Name (@request.Customer.Email, @request.Customer.Phone) &middot;
+                Recorded @DisplayFormat.DateAndTime(request.SubmittedAt) by @DisplayText.Label(request.Channel)
+            </p>
+        }
+
+        <div class="alert alert-light border mt-3 mb-0">
+            @if (delivery is not null)
+            {
+                @delivery.ProgressSummary
+            }
+            else if (quote is null)
+            {
+                <text>Waiting for our office to prepare a quote.</text>
+            }
+            else if (quote.Response == QuoteResponse.Pending)
+            {
+                <text>A quote of @DisplayFormat.Money(quote.Cost) is waiting for the customer's response (valid until @DisplayFormat.DateAndTime(quote.ValidUntil)).</text>
+            }
+            else
+            {
+                <text>The quote was declined on @DisplayFormat.DateAndTime(quote.RespondedAt!.Value). This request will not proceed.</text>
+            }
+        </div>
+    </div></div>
+
+    <div class="row g-3">
+        <div class="col-lg-6">
+            <div class="card h-100"><div class="card-body">
+                <h3 class="h6">Schedule</h3>
+                @if (quote is null)
+                {
+                    <p class="text-muted small mb-0">Preferred pickup date: @DisplayFormat.Day(request.PreferredPickupDate). Times are confirmed in the quote.</p>
+                }
+                else
+                {
+                    <table class="table table-sm mb-0">
+                        <tr><th>Estimated pickup</th><td>@DisplayFormat.DateAndTime(quote.Window.Start)</td></tr>
+                        <tr><th>Estimated delivery</th><td>@DisplayFormat.DateAndTime(quote.Window.End)</td></tr>
+                        <tr><th>Quoted cost</th><td>@DisplayFormat.Money(quote.Cost)</td></tr>
+                        @if (delivery?.AllocatedStaff is { } staff)
+                        {
+                            <tr><th>Delivery staff</th><td>@staff.Name@(Model.IsStaffView ? $" ({staff.Id}, {staff.Phone})" : string.Empty)</td></tr>
+                        }
+                        @if (delivery?.Payment is { } payment)
+                        {
+                            <tr><th>Payment</th><td>@DisplayFormat.Money(payment.Amount) by @DisplayText.Label(payment.Method), @DisplayFormat.DateAndTime(payment.ReceivedAt)</td></tr>
+                        }
+                    </table>
+                }
+            </div></div>
+        </div>
+        <div class="col-lg-6">
+            <div class="card h-100"><div class="card-body">
+                <h3 class="h6">Parcels (@request.Parcels.Count)</h3>
+                <table class="table table-sm mb-0">
+                    <thead><tr><th>Parcel</th><th>Contents</th><th>Weight</th><th>Collected</th><th>Delivered</th></tr></thead>
+                    <tbody>
+                        @foreach (var parcel in request.Parcels)
+                        {
+                            <tr>
+                                <td>@parcel.Id</td>
+                                <td>@parcel.Description@(parcel.IsFragile ? " (fragile)" : string.Empty)</td>
+                                <td>@parcel.WeightKg kg</td>
+                                <td>@(parcel.CollectedAt is { } collected ? DisplayFormat.TimeOfDay(collected) : "–")</td>
+                                <td>@(parcel.DeliveredAt is { } delivered ? DisplayFormat.TimeOfDay(delivered) : "–")</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div></div>
+        </div>
+    </div>
+
+    @if (delivery is not null)
+    {
+        <div class="card mt-3"><div class="card-body">
+            <h3 class="h6">History</h3>
+            <ul class="timeline mb-0">
+                @foreach (var entry in delivery.History)
+                {
+                    <li class="@(entry.IsIssue ? "issue" : string.Empty)">
+                        <span class="small text-muted">@DisplayFormat.DateAndTime(entry.At)</span><br />
+                        @entry.Description
+                    </li>
+                }
+            </ul>
+        </div></div>
+    }
+
+    @if (Model.IsStaffView)
+    {
+        <div class="mt-3 d-flex gap-2">
+            @if (User.IsOffice())
+            {
+                <a class="btn btn-outline-primary btn-sm" asp-page="/Office/Requests/Details" asp-route-reference="@request.Reference">Open request</a>
+                @if (delivery is { Status: DeliveryStatus.AwaitingAllocation or DeliveryStatus.Allocated })
+                {
+                    <a class="btn btn-outline-primary btn-sm" asp-page="/Office/Allocation/Allocate" asp-route-id="@delivery.Id">Allocate / reassign staff</a>
+                }
+            }
+        </div>
+    }
+}
