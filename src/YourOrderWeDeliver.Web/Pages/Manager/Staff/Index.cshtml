@@ -1,0 +1,71 @@
+@page
+@model YourOrderWeDeliver.Web.Pages.Manager.Staff.IndexModel
+@{
+    ViewData["Title"] = "Delivery staff records";
+}
+
+<h1 class="h3">Delivery staff records</h1>
+<p class="text-muted">Staff who leave are marked inactive, never deleted, so their delivery history stays available.</p>
+
+<partial name="_ErrorSummary" />
+
+<div class="row g-3">
+    <div class="col-lg-8">
+        <div class="card"><div class="card-body p-0">
+            <table class="table table-hover align-middle mb-0">
+                <thead><tr><th>ID</th><th>Name</th><th>Contact</th><th>Status</th><th>Current</th><th>Completed</th><th></th></tr></thead>
+                <tbody>
+                    @foreach (var staff in Model.StaffList)
+                    {
+                        <tr class="@(staff.IsActive ? string.Empty : "text-muted")">
+                            <td>@staff.Id</td>
+                            <td>@staff.Name</td>
+                            <td class="small">@staff.Phone<br />@staff.Email</td>
+                            <td>
+                                @if (staff.IsActive)
+                                {
+                                    <span class="badge text-bg-success">Active</span>
+                                }
+                                else
+                                {
+                                    <span class="badge text-bg-secondary">Left @(staff.LeftOn is { } left ? DisplayFormat.Day(left) : string.Empty)</span>
+                                }
+                            </td>
+                            <td>@staff.CurrentDeliveries.Count()</td>
+                            <td>@staff.DeliveryHistory.Count(d => d.Status == DeliveryStatus.Delivered)</td>
+                            <td class="text-end"><a class="btn btn-sm btn-outline-primary" asp-page="Edit" asp-route-id="@staff.Id">Open</a></td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div></div>
+    </div>
+
+    <div class="col-lg-4">
+        <form method="post" novalidate class="card"><div class="card-body">
+            <h2 class="h5">A staff member joins</h2>
+            <div class="mb-2">
+                <label asp-for="Input.Name" class="form-label"><span class="required">Full name</span></label>
+                <input asp-for="Input.Name" class="form-control" />
+                <span asp-validation-for="Input.Name" class="field-validation-error"></span>
+            </div>
+            <div class="mb-2">
+                <label asp-for="Input.Phone" class="form-label"><span class="required">Phone number</span></label>
+                <input asp-for="Input.Phone" class="form-control" type="tel" placeholder="e.g. 0412 345 678" />
+                <span asp-validation-for="Input.Phone" class="field-validation-error"></span>
+            </div>
+            <div class="mb-2">
+                <label asp-for="Input.Email" class="form-label"><span class="required">Email address</span></label>
+                <input asp-for="Input.Email" class="form-control" type="email" />
+                <span asp-validation-for="Input.Email" class="field-validation-error"></span>
+            </div>
+            <div class="mb-3">
+                <label asp-for="JoinedOn" class="form-label"><span class="required">Joining date</span></label>
+                <input asp-for="JoinedOn" class="form-control" type="date" />
+                <span asp-validation-for="JoinedOn" class="field-validation-error"></span>
+            </div>
+            <p class="form-text">If a former staff member rejoins, open their existing record and reactivate it instead.</p>
+            <button type="submit" class="btn btn-primary" asp-page-handler="Add">Add staff member</button>
+        </div></form>
+    </div>
+</div>

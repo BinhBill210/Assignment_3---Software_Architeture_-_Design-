@@ -1,0 +1,166 @@
+@page "{id?}"
+@model YourOrderWeDeliver.Web.Pages.Manager.Staff.EditModel
+@{
+    ViewData["Title"] = $"Staff {Model.Id}";
+    var record = Model.Record;
+}
+
+<p><a asp-page="Index">&larr; All staff</a></p>
+
+@if (record is not null)
+{
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h1 class="h3 mb-0">@record.Name <small class="text-muted">@record.Id</small></h1>
+        @if (record.IsActive)
+        {
+            <span class="badge fs-6 text-bg-success">Active since @DisplayFormat.Day(record.JoinedOn)</span>
+        }
+        else
+        {
+            <span class="badge fs-6 text-bg-secondary">Left @(record.LeftOn is { } left ? DisplayFormat.Day(left) : string.Empty)</span>
+        }
+    </div>
+
+    <partial name="_ErrorSummary" />
+
+    @if (ViewData["Outcome"] is string outcome)
+    {
+        <div class="alert alert-warning">
+            @outcome
+            @if (Model.Outcomes.Count > 0)
+            {
+                <ul class="mb-0 mt-2">
+                    @foreach (var item in Model.Outcomes)
+                    {
+                        <li>@item.Summary</li>
+                    }
+                </ul>
+            }
+        </div>
+    }
+
+    <div class="row g-3">
+        <div class="col-lg-6">
+            <form method="post" novalidate class="card mb-3"><div class="card-body">
+                <h2 class="h5">Contact details</h2>
+                <input type="hidden" asp-for="Id" />
+                <div class="mb-2">
+                    <label asp-for="Input.Name" class="form-label"><span class="required">Full name</span></label>
+                    <input asp-for="Input.Name" class="form-control" />
+                    <span asp-validation-for="Input.Name" class="field-validation-error"></span>
+                </div>
+                <div class="mb-2">
+                    <label asp-for="Input.Phone" class="form-label"><span class="required">Phone number</span></label>
+                    <input asp-for="Input.Phone" class="form-control" type="tel" />
+                    <span asp-validation-for="Input.Phone" class="field-validation-error"></span>
+                </div>
+                <div class="mb-3">
+                    <label asp-for="Input.Email" class="form-label"><span class="required">Email address</span></label>
+                    <input asp-for="Input.Email" class="form-control" type="email" />
+                    <span asp-validation-for="Input.Email" class="field-validation-error"></span>
+                </div>
+                <button type="submit" class="btn btn-primary" asp-page-handler="Save">Save details</button>
+            </div></form>
+
+            <form method="post" novalidate class="card"><div class="card-body">
+                <input type="hidden" asp-for="Id" />
+                <input type="hidden" asp-for="Input.Name" />
+                <input type="hidden" asp-for="Input.Phone" />
+                <input type="hidden" asp-for="Input.Email" />
+                @if (record.IsActive)
+                {
+                    <h2 class="h5">The staff member leaves</h2>
+                    @if (Model.IsConfirmingLeave)
+                    {
+                        <input type="hidden" asp-for="EffectiveDate" value="@Model.EffectiveDate?.ToString("yyyy-MM-dd")" />
+                        <div class="alert alert-danger">
+                            Record that <strong>@record.Name</strong> left on <strong>@DisplayFormat.Day(DateOnly.FromDateTime(Model.EffectiveDate!.Value))</strong>?
+                            @{ var unpicked = record.CurrentDeliveries.Where(d => d.Status == DeliveryStatus.Allocated).ToList(); }
+                            @if (unpicked.Count > 0)
+                            {
+                                <br /><text>@unpicked.Count delivery(ies) not yet picked up will be reassigned: @string.Join(", ", unpicked.Select(d => d.Id)).</text>
+                            }
+                        </div>
+                        <button type="submit" class="btn btn-danger" asp-page-handler="Leave">Confirm: staff member has left</button>
+                        <button type="submit" class="btn btn-outline-secondary" asp-page-handler="Cancel">Cancel</button>
+                    }
+                    else
+                    {
+                        <div class="row g-2 align-items-end">
+                            <div class="col-md-6">
+                                <label asp-for="EffectiveDate" class="form-label"><span class="required">Leaving date</span></label>
+                                <input asp-for="EffectiveDate" class="form-control" type="date" />
+                                <span asp-validation-for="EffectiveDate" class="field-validation-error"></span>
+                            </div>
+                            <div class="col-md-6">
+                                <button type="submit" class="btn btn-outline-danger" asp-page-handler="ConfirmLeave">Record that they have left</button>
+                            </div>
+                        </div>
+                    }
+                }
+                else
+                {
+                    <h2 class="h5">The staff member rejoins</h2>
+                    <p class="small text-muted">The same record is reactivated so their earlier history stays together.</p>
+                    <div class="row g-2 align-items-end">
+                        <div class="col-md-6">
+                            <label asp-for="EffectiveDate" class="form-label"><span class="required">Rejoining date</span></label>
+                            <input asp-for="EffectiveDate" class="form-control" type="date" />
+                            <span asp-validation-for="EffectiveDate" class="field-validation-error"></span>
+                        </div>
+                        <div class="col-md-6">
+                            <button type="submit" class="btn btn-success" asp-page-handler="Reactivate">Reactivate record</button>
+                        </div>
+                    </div>
+                }
+            </div></form>
+        </div>
+
+        <div class="col-lg-6">
+            <div class="card mb-3"><div class="card-body">
+                <h2 class="h5">Availability</h2>
+                @if (record.Availability.Periods.Count == 0)
+                {
+                    <p class="small text-muted mb-1">No availability recorded.</p>
+                }
+                else
+                {
+                    <ul class="small mb-1">
+                        @foreach (var period in record.Availability.Periods.Take(5))
+                        {
+                            <li>@DisplayFormat.Window(period.Window)</li>
+                        }
+                    </ul>
+                }
+                @if (record.IsActive)
+                {
+                    <a asp-page="/Availability/Index" asp-route-staffId="@record.Id">Manage availability</a>
+                }
+            </div></div>
+
+            <div class="card"><div class="card-body">
+                <h2 class="h5">Delivery history</h2>
+                @if (!record.DeliveryHistory.Any())
+                {
+                    <p class="small text-muted mb-0">No deliveries yet.</p>
+                }
+                else
+                {
+                    <table class="table table-sm mb-0">
+                        <thead><tr><th>Delivery</th><th>Window</th><th>Status</th></tr></thead>
+                        <tbody>
+                            @foreach (var delivery in record.DeliveryHistory)
+                            {
+                                <tr>
+                                    <td><a asp-page="/Track/Index" asp-route-reference="@delivery.Id">@delivery.Id</a></td>
+                                    <td>@DisplayFormat.Window(delivery.Window)</td>
+                                    <td><span class="badge @DisplayText.BadgeClass(delivery.Status)">@DisplayText.Label(delivery.Status)</span></td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                }
+            </div></div>
+        </div>
+    </div>
+}
