@@ -1,0 +1,87 @@
+@page
+@model YourOrderWeDeliver.Web.Pages.Manager.StatisticsModel
+@{
+    ViewData["Title"] = "Delivery statistics";
+    var result = Model.Result;
+}
+
+<h1 class="h3">Delivery statistics</h1>
+
+<form method="get" novalidate class="card mb-3"><div class="card-body">
+    <div class="row g-2 align-items-end">
+        <div class="col-md-3">
+            <label asp-for="Period" class="form-label"><span class="required">Reporting period</span></label>
+            <select asp-for="Period" class="form-select">
+                @foreach (var period in Enum.GetValues<ReportingPeriod>())
+                {
+                    <option value="@period">@DisplayText.Label(period)</option>
+                }
+            </select>
+            <span asp-validation-for="Period" class="field-validation-error"></span>
+        </div>
+        <div class="col-md-3">
+            <label asp-for="Date" class="form-label"><span class="required">Date in period</span></label>
+            <input asp-for="Date" class="form-control" type="date" />
+            <span asp-validation-for="Date" class="field-validation-error"></span>
+        </div>
+        <div class="col-md-4">
+            <label asp-for="StaffId" class="form-label">Report on</label>
+            <select asp-for="StaffId" asp-items="Model.StaffChoices" class="form-select"></select>
+            <span asp-validation-for="StaffId" class="field-validation-error"></span>
+        </div>
+        <div class="col-md-2"><button type="submit" class="btn btn-primary w-100">Show statistics</button></div>
+    </div>
+</div></form>
+
+<partial name="_ErrorSummary" />
+
+@if (result is not null)
+{
+    <h2 class="h5">
+        @(result.Staff is null ? "Whole business" : $"{result.Staff.Name} ({result.Staff.Id})")
+        <small class="text-muted">&middot; @DisplayText.Label(result.Period): @DisplayFormat.Day(DateOnly.FromDateTime(result.From)) to @DisplayFormat.Day(DateOnly.FromDateTime(result.To.AddDays(-1)))</small>
+    </h2>
+
+    <div class="row g-3 mb-3">
+        @if (result.Staff is null)
+        {
+            <div class="col-md-2"><div class="card"><div class="card-body"><div class="small text-muted">Requests received</div><div class="stat-value">@result.RequestsReceived</div></div></div></div>
+            <div class="col-md-2"><div class="card"><div class="card-body"><div class="small text-muted">Quotes accepted</div><div class="stat-value">@result.QuotesAccepted</div></div></div></div>
+            <div class="col-md-2"><div class="card"><div class="card-body"><div class="small text-muted">Quotes declined</div><div class="stat-value">@result.QuotesDeclined</div></div></div></div>
+        }
+        <div class="col-md-2"><div class="card"><div class="card-body"><div class="small text-muted">Deliveries completed</div><div class="stat-value">@result.DeliveriesCompleted</div></div></div></div>
+        <div class="col-md-2"><div class="card"><div class="card-body"><div class="small text-muted">Parcels delivered</div><div class="stat-value">@result.ParcelsDelivered</div></div></div></div>
+        <div class="col-md-2"><div class="card"><div class="card-body"><div class="small text-muted">On time</div><div class="stat-value">@(result.OnTimeRate is { } rate ? rate.ToString("P0", DisplayFormat.DisplayCulture) : "–")</div></div></div></div>
+        <div class="col-md-3"><div class="card"><div class="card-body"><div class="small text-muted">Payments recorded</div><div class="stat-value">@DisplayFormat.Money(result.PaymentsRecorded)</div></div></div></div>
+        <div class="col-md-3"><div class="card"><div class="card-body"><div class="small text-muted">Average pickup to delivery</div><div class="stat-value">@(result.AveragePickupToDelivery is { } average ? $"{(int)average.TotalHours} h {average.Minutes} min" : "–")</div></div></div></div>
+    </div>
+
+    @if (result.Staff is null)
+    {
+        <div class="card"><div class="card-body">
+            <h3 class="h6">Completed deliveries by staff member</h3>
+            @if (result.StaffBreakdown.Count == 0)
+            {
+                <p class="text-muted mb-0">No deliveries were completed in this period.</p>
+            }
+            else
+            {
+                <table class="table table-sm mb-0">
+                    <thead><tr><th>Staff member</th><th>Deliveries</th><th>Parcels</th><th>On time</th><th></th></tr></thead>
+                    <tbody>
+                        @foreach (var row in result.StaffBreakdown)
+                        {
+                            <tr>
+                                <td>@row.StaffName <span class="small text-muted">@row.StaffId</span></td>
+                                <td>@row.DeliveriesCompleted</td>
+                                <td>@row.ParcelsDelivered</td>
+                                <td>@row.OnTimeDeliveries</td>
+                                <td class="text-end"><a asp-page="Statistics" asp-route-period="@result.Period" asp-route-date="@Model.Date?.ToString("yyyy-MM-dd")" asp-route-staffId="@row.StaffId">Details</a></td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            }
+        </div></div>
+    }
+}
