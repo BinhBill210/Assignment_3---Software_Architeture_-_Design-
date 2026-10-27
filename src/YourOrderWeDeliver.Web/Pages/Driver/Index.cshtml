@@ -1,0 +1,62 @@
+@page
+@model YourOrderWeDeliver.Web.Pages.Driver.IndexModel
+@{
+    ViewData["Title"] = "My deliveries";
+}
+
+<h1 class="h3">My deliveries</h1>
+
+@if (Model.Staff is null)
+{
+    <div class="alert alert-warning">Your staff record could not be found. Please contact the office.</div>
+}
+else
+{
+    <div class="card mb-3"><div class="card-body">
+        <h2 class="h5">To do (@Model.Current.Count)</h2>
+        @if (Model.Current.Count == 0)
+        {
+            <p class="text-muted mb-0">No deliveries are allocated to you at the moment.</p>
+        }
+        else
+        {
+            <table class="table table-hover align-middle mb-0">
+                <thead><tr><th>Delivery</th><th>Window</th><th>Pickup</th><th>Destination</th><th>Status</th><th></th></tr></thead>
+                <tbody>
+                    @foreach (var delivery in Model.Current)
+                    {
+                        <tr>
+                            <td class="fw-semibold">@delivery.Id</td>
+                            <td>@DisplayFormat.Window(delivery.Window)</td>
+                            <td class="small">@delivery.Request.PickupAddress</td>
+                            <td class="small">@delivery.Request.DestinationAddress</td>
+                            <td><span class="badge @DisplayText.BadgeClass(delivery.Status)">@DisplayText.Label(delivery.Status)</span></td>
+                            <td class="text-end">
+                                <a class="btn btn-sm btn-primary" asp-page="Delivery" asp-route-id="@delivery.Id">
+                                    @(delivery.Status == DeliveryStatus.Allocated ? "Pick up" : "Deliver")
+                                </a>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        }
+    </div></div>
+
+    <div class="card"><div class="card-body">
+        <h2 class="h5">Recently completed</h2>
+        @if (Model.Completed.Count == 0)
+        {
+            <p class="text-muted mb-0">No completed deliveries yet.</p>
+        }
+        else
+        {
+            <ul class="mb-0">
+                @foreach (var delivery in Model.Completed)
+                {
+                    <li>@delivery.Id &middot; @delivery.ProgressSummary</li>
+                }
+            </ul>
+        }
+    </div></div>
+}
