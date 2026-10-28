@@ -30,7 +30,12 @@
                         <li class="nav-item"><a class="nav-link" asp-page="/Track/Index">Track a delivery</a></li>
                         @if (User.IsOffice())
                         {
-                            <li class="nav-item"><a class="nav-link" asp-page="/Office/Requests/Index">Requests &amp; quotes</a></li>
+                            <li class="nav-item">
+                                <a class="nav-link" asp-page="/Office/Requests/Index" asp-route-status="">All requests</a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link" asp-page="/Office/Requests/Index" asp-route-status="Submitted">Prepare quotes</a>
+                            </li>
                             <li class="nav-item"><a class="nav-link" asp-page="/Office/Allocation/Index">Allocation</a></li>
                             <li class="nav-item"><a class="nav-link" asp-page="/Availability/Index">Availability</a></li>
                         }

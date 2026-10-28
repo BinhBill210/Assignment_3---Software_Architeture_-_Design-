@@ -72,6 +72,13 @@ else if (User.IsOffice())
             </div></div>
         </div>
     </div>
+    <p>
+        <a class="btn btn-outline-primary"
+        asp-page="/Office/Requests/Index"
+        asp-route-status="">
+            View all requests
+        </a>
+    </p>
     @if (User.IsInRole(Roles.Manager))
     {
         <div class="d-flex gap-2">
