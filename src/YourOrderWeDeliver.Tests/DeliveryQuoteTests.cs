@@ -130,7 +130,106 @@ public sealed class DeliveryQuoteTests
 
         Assert.Contains("expired", error.Message, StringComparison.Ordinal);
     }
+    [Theory]
+    [InlineData(-1, true)]
+    [InlineData(0, true)]
+    [InlineData(1, false)]
+    public void RecordQuoteResponse_OneHourDeadline_Enforced(
+        int secondsFromDeadline, bool shouldAccept)
+    {
+        var world = new TestWorld();
+        world.AddStaff("Sam Lee", "sam@yowd.com.au");
+        DeliveryRequest request = world.RecordRequest();
+        DeliveryQuote quote = request.PrepareQuote(
+            TestWorld.Terms(pickupHour: 10, deliveryHour: 12),
+            world.Roster,
+            world.Now);
 
+        Assert.Equal(TestWorld.At(9), quote.ValidUntil);
+        world.Clock.Now = TestWorld.At(9).AddSeconds(secondsFromDeadline);
+
+        if (shouldAccept)
+        {
+            Delivery? delivery = world.Register.RecordQuoteResponse(
+                request, accepted: true, world.Now);
+
+            Assert.NotNull(delivery);
+            Assert.Equal(QuoteResponse.Accepted, quote.Response);
+            Assert.Single(world.Register.Deliveries);
+        }
+        else
+        {
+            var error = Assert.Throws<BusinessRuleException>(
+                () => world.Register.RecordQuoteResponse(
+                    request, accepted: true, world.Now));
+
+            Assert.Contains("contact our office", error.Message, StringComparison.Ordinal);
+            Assert.Equal(QuoteResponse.Pending, quote.Response);
+            Assert.Null(request.Delivery);
+            Assert.Empty(world.Register.Deliveries);
+        }
+    }
+
+    [Theory]
+    [InlineData(59, false)]
+    [InlineData(60, false)]
+    [InlineData(61, true)]
+    public void PrepareQuote_PickupLeadTime_Enforced(
+        int minutesUntilPickup, bool shouldPrepare)
+    {
+        var world = new TestWorld();
+        world.AddStaff("Sam Lee", "sam@yowd.com.au");
+        DeliveryRequest request = world.RecordRequest();
+        DateTime pickup = world.Now.AddMinutes(minutesUntilPickup);
+        var terms = new QuoteTerms(40m, pickup, pickup.AddHours(2));
+
+        if (shouldPrepare)
+        {
+            DeliveryQuote quote = request.PrepareQuote(
+                terms, world.Roster, world.Now);
+
+            Assert.NotNull(quote);
+            Assert.Equal(pickup.AddHours(-1), quote.ValidUntil);
+        }
+        else
+        {
+            Assert.Throws<BusinessRuleException>(
+                () => request.PrepareQuote(terms, world.Roster, world.Now));
+
+            Assert.Null(request.Quote);
+        }
+    }
+
+    [Fact]
+    public void RecordQuoteResponse_SevenDayDeadlineBeforePickup_Enforced()
+    {
+        var world = new TestWorld();
+        DeliveryStaff sam = world.AddStaff("Sam Lee", "sam@yowd.com.au");
+        DateTime pickup = TestWorld.At(10).AddDays(10);
+        DateTime deliveryTime = pickup.AddHours(2);
+        sam.Availability.AddPeriod(pickup, deliveryTime, world.Now);
+
+        DeliveryRequest request = world.RecordRequest();
+        DeliveryQuote quote = request.PrepareQuote(
+            new QuoteTerms(40m, pickup, deliveryTime),
+            world.Roster,
+            world.Now);
+
+        DateTime expectedDeadline = world.Now.AddDays(7);
+
+        Assert.Equal(expectedDeadline, quote.ValidUntil);
+        Assert.False(quote.IsExpired(expectedDeadline));
+
+        world.Clock.Now = expectedDeadline.AddSeconds(1);
+
+        Assert.Throws<BusinessRuleException>(
+            () => world.Register.RecordQuoteResponse(
+                request, accepted: true, world.Now));
+
+        Assert.Equal(QuoteResponse.Pending, quote.Response);
+        Assert.Null(request.Delivery);
+        Assert.Empty(world.Register.Deliveries);
+    }
     [Fact]
     public void StandardPricingPolicy_CombinesParcelWeightAndFragileFees()
     {
