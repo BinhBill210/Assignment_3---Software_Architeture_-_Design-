@@ -44,18 +44,18 @@ public static class DisplayText
     /// <summary>Bootstrap badge colour for a request status.</summary>
     public static string BadgeClass(RequestStatus status) => status switch
     {
-        RequestStatus.Submitted => "text-bg-secondary",
-        RequestStatus.Quoted => "text-bg-info",
-        RequestStatus.Accepted => "text-bg-success",
-        _ => "text-bg-dark",
+        RequestStatus.Submitted => "bg-secondary text-white",
+        RequestStatus.Quoted => "bg-info text-dark",
+        RequestStatus.Accepted => "bg-success text-white",
+        _ => "bg-dark text-white",
     };
 
     /// <summary>Bootstrap badge colour for a delivery status.</summary>
     public static string BadgeClass(DeliveryStatus status) => status switch
     {
-        DeliveryStatus.AwaitingAllocation => "text-bg-warning",
-        DeliveryStatus.Allocated => "text-bg-primary",
-        DeliveryStatus.PickedUp => "text-bg-info",
-        _ => "text-bg-success",
+        DeliveryStatus.AwaitingAllocation => "bg-warning text-dark",
+        DeliveryStatus.Allocated => "bg-primary text-white",
+        DeliveryStatus.PickedUp => "bg-info text-dark",
+        _ => "bg-success text-white",
     };
 }
