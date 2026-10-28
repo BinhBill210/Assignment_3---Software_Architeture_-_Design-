@@ -23,6 +23,19 @@ internal static partial class Require
 
         return trimmed;
     }
+    public static string PersonName(string? value, string fieldLabel, int maxLength)
+    {
+        string name = Text(value, fieldLabel, maxLength);
+
+        if (!name.Any(char.IsLetter) || !PersonNamePattern().IsMatch(name))
+        {
+            throw new BusinessRuleException(
+                $"{fieldLabel} must contain letters and may include spaces, "
+                + "apostrophes, hyphens and periods. Numbers are not allowed.");
+        }
+
+        return name;
+    }
 
     public static string? OptionalText(string? value, string fieldLabel, int maxLength)
     {
@@ -64,6 +77,8 @@ internal static partial class Require
             throw new BusinessRuleException(message);
         }
     }
+    [GeneratedRegex(@"\A[\p{L}\p{M} .'\u2019\u2010\u2011-]+\z")]
+    private static partial Regex PersonNamePattern();
 
     [GeneratedRegex(@"^[^@\s]+@[^@\s]+\.[^@\s]+$")]
     private static partial Regex EmailPattern();

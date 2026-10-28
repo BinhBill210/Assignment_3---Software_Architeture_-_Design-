@@ -15,7 +15,7 @@ public sealed class DeliveryStaff
     internal DeliveryStaff(string id, string name, string phone, string email, DateOnly joinedOn)
     {
         Id = id;
-        Name = Require.Text(name, "Staff name", 100);
+        Name = Require.PersonName(name, "Staff name", 100);
         Phone = Require.Phone(phone);
         Email = Require.Email(email);
         JoinedOn = joinedOn;
@@ -57,7 +57,7 @@ public sealed class DeliveryStaff
     /// <summary>Changes the staff member's contact details (A1 T10 subtask 3).</summary>
     public void UpdateDetails(string name, string phone, string email)
     {
-        string validName = Require.Text(name, "Staff name", 100);
+        string validName = Require.PersonName(name, "Staff name", 100);
         string validPhone = Require.Phone(phone);
         string validEmail = Require.Email(email);
         Name = validName;

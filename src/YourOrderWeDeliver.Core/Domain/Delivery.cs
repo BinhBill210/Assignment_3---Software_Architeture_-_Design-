@@ -185,7 +185,7 @@ public sealed class Delivery
             DeliveredParcelCount == Parcels.Count,
             $"Completion cannot be recorded yet: only {DeliveredParcelCount} of {Parcels.Count} parcel(s) are marked as delivered. "
             + "Mark every parcel as delivered first.");
-        ReceivedBy = Require.Text(recipientName, "Received by (recipient name)", 100);
+        ReceivedBy = Require.PersonName(recipientName, "Received by (recipient name)", 100);
         DeliveredAt = now;
         Status = DeliveryStatus.Delivered;
         Record(now, $"Delivery completed. Received by {ReceivedBy}.");

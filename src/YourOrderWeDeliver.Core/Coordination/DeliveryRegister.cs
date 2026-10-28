@@ -169,7 +169,7 @@ public sealed class DeliveryRegister
     private PreparedRequest Prepare(RequestDetails details, DateTime now)
     {
         ArgumentNullException.ThrowIfNull(details);
-        string name = Require.Text(details.CustomerName, "Customer name", 100);
+        string name = Require.PersonName(details.CustomerName, "Customer name", 100);
         string email = Require.Email(details.CustomerEmail);
         string phone = Require.Phone(details.CustomerPhone);
         Address pickup = Address.Create(details.Pickup.Street, details.Pickup.Suburb, details.Pickup.Postcode, "Pickup");

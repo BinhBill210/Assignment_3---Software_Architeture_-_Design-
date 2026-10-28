@@ -13,7 +13,7 @@ public sealed class Customer
     internal Customer(string id, string name, string email, string phone)
     {
         Id = id;
-        Name = Require.Text(name, "Customer name", 100);
+        Name = Require.PersonName(name, "Customer name", 100);
         Email = Require.Email(email);
         Phone = Require.Phone(phone);
     }
@@ -48,7 +48,7 @@ public sealed class Customer
 
     internal void UpdateContactDetails(string name, string phone)
     {
-        Name = Require.Text(name, "Customer name", 100);
+        Name = Require.PersonName(name, "Customer name", 100);
         Phone = Require.Phone(phone);
     }
 
