@@ -12,6 +12,10 @@ public sealed class IndexModel(DeliveryManagementSystem system) : DmsPageModel(s
     [BindProperty(SupportsGet = true)]
     public RequestStatus? Status { get; set; }
 
+    /// <summary>Gets or sets the full or partial request reference to find.</summary>
+    [BindProperty(SupportsGet = true)]
+    public string? Search { get; set; }
+
     /// <summary>Gets the requests to show, newest first.</summary>
     public IReadOnlyList<DeliveryRequest> Requests { get; private set; } = [];
 
@@ -21,8 +25,22 @@ public sealed class IndexModel(DeliveryManagementSystem system) : DmsPageModel(s
     /// <summary>Loads the list.</summary>
     public void OnGet()
     {
+        Search = Search?.Trim();
+
+        List<DeliveryRequest> matchingRequests = Register.Requests
+            .Where(request =>
+                string.IsNullOrEmpty(Search)
+                || request.Reference.Contains(
+                    Search, StringComparison.OrdinalIgnoreCase))
+            .ToList();
+
         Counts = Enum.GetValues<RequestStatus>()
-            .ToDictionary(status => status, status => Register.Requests.Count(request => request.Status == status));
-        Requests = Register.Requests.Where(request => Status is null || request.Status == Status).ToList();
+            .ToDictionary(
+                status => status,
+                status => matchingRequests.Count(request => request.Status == status));
+
+        Requests = matchingRequests
+            .Where(request => Status is null || request.Status == Status)
+            .ToList();
     }
 }

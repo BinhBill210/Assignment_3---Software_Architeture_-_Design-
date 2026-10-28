@@ -9,15 +9,45 @@
     <a class="btn btn-primary" asp-page="/Request/New">+ Record a request for a customer</a>
 </div>
 
+<form method="get" asp-page="Index" class="card mb-3">
+    <div class="card-body">
+        <input type="hidden" asp-for="Status" />
+
+        <label asp-for="Search" class="form-label">Search by request ID</label>
+
+        <div class="d-flex flex-wrap gap-2">
+            <input asp-for="Search"
+                   class="form-control"
+                   style="max-width: 360px;"
+                   placeholder="For example, REQ-100007 or 100007" />
+
+            <button type="submit" class="btn btn-primary">Search</button>
+
+            <a class="btn btn-outline-secondary"
+               asp-page="Index"
+               asp-route-status="@Model.Status"
+               asp-route-search="">
+                Clear search
+            </a>
+        </div>
+
+        <p class="form-text mb-0">
+            Enter a full or partial request ID.
+            Search applies within the selected stage.
+        </p>
+    </div>
+</form>
+
 <div class="btn-group mb-3" role="group" aria-label="Filter by stage">
     <a class="btn btn-sm @(Model.Status is null ? "btn-secondary" : "btn-outline-secondary")"
         asp-page="Index"
-        asp-route-status="">
+        asp-route-status=""
+        asp-route-search="@Model.Search">
             All (@Model.Counts.Values.Sum())
     </a>
     @foreach (var status in Enum.GetValues<RequestStatus>())
     {
-        <a class="btn btn-sm @(Model.Status == status ? "btn-secondary" : "btn-outline-secondary")" asp-page="Index" asp-route-status="@status">
+        <a class="btn btn-sm @(Model.Status == status ? "btn-secondary" : "btn-outline-secondary")" asp-page="Index" asp-route-status="@status" asp-route-search="@Model.Search">
             @DisplayText.Label(status) (@Model.Counts[status])
         </a>
     }
@@ -25,7 +55,19 @@
 
 @if (Model.Requests.Count == 0)
 {
-    <div class="alert alert-info">No requests at this stage.</div>
+    <div class="alert alert-info">
+        @if (!string.IsNullOrEmpty(Model.Search))
+        {
+            <span>
+                No requests match "@Model.Search" within the selected stage.
+                Try another ID, clear the search, or select All.
+            </span>
+        }
+        else
+        {
+            <span>No requests at this stage.</span>
+        }
+    </div>
 }
 else
 {
