@@ -15,6 +15,9 @@ public sealed class DeliveryQuote
     /// <summary>How long a quote can be accepted after it is prepared (A1 assumption A14).</summary>
     public static readonly TimeSpan ValidityPeriod = TimeSpan.FromDays(7);
 
+    /// <summary>Minimum time required between quote acceptance and pickup.</summary>
+    public static readonly TimeSpan AcceptanceLeadTime = TimeSpan.FromHours(1);
+
     /// <summary>Longest time allowed between estimated pickup and delivery.</summary>
     public static readonly TimeSpan MaxDeliveryDuration = TimeSpan.FromHours(12);
 
@@ -50,8 +53,21 @@ public sealed class DeliveryQuote
     /// <summary>Gets when the customer responded.</summary>
     public DateTime? RespondedAt { get; internal set; }
 
-    /// <summary>Gets the last moment at which the customer may accept.</summary>
-    public DateTime ValidUntil => PreparedAt + ValidityPeriod;
+    /// <summary>
+    /// Gets the earlier of seven days after preparation or one hour before pickup.
+    /// </summary>
+    public DateTime ValidUntil
+    {
+        get
+        {
+            DateTime validityDeadline = PreparedAt + ValidityPeriod;
+            DateTime pickupDeadline = Window.Start - AcceptanceLeadTime;
+
+            return validityDeadline < pickupDeadline
+                ? validityDeadline
+                : pickupDeadline;
+        }
+    }
 
     /// <summary>Gets whether the request may proceed to an operational delivery (R7).</summary>
     public bool MayProceedToDelivery => Response == QuoteResponse.Accepted;
@@ -65,7 +81,10 @@ public sealed class DeliveryQuote
             terms.Cost > 0 && terms.Cost <= MaxCost,
             $"The delivery cost must be more than $0 and no more than {DisplayFormat.Money(MaxCost)}.");
         Require.That(decimal.Round(terms.Cost, 2) == terms.Cost, "The delivery cost can have at most two decimal places.");
-        Require.That(terms.EstimatedPickup > now, "The estimated pickup time must be in the future.");
+        Require.That(
+            terms.EstimatedPickup > now + AcceptanceLeadTime,
+            "The estimated pickup time must be more than one hour from now, "
+            + "so the customer has time to accept the quote.");
         Require.That(
             terms.EstimatedDelivery > terms.EstimatedPickup,
             "The estimated delivery time must be later than the estimated pickup time.");
@@ -104,7 +123,7 @@ public sealed class DeliveryQuote
         Require.That(
             !IsExpired(now),
             $"This quote expired on {DisplayFormat.DateAndTime(ValidUntil)}. "
-            + "Please contact our office so the quote can be revised.");
+            + "Please contact our office for a revised quote.");
         Response = accepted ? QuoteResponse.Accepted : QuoteResponse.Declined;
         RespondedAt = now;
     }

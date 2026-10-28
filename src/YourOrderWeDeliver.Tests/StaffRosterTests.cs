@@ -113,6 +113,7 @@ public sealed class StaffRosterTests
     public void SuggestEarliestWindow_SkipsBusyTime()
     {
         var world = new TestWorld();
+        world.Clock.Now = TestWorld.At(7, 30);
         DeliveryStaff sam = world.AddStaff("Sam Lee", "sam@yowd.com.au", fromHour: 9, toHour: 17);
         Delivery delivery = world.CreateAcceptedDelivery(pickupHour: 9, deliveryHour: 12);
         delivery.AllocateStaff(sam, world.Roster, world.Now);
