@@ -45,6 +45,9 @@ public sealed class DetailsModel(DeliveryManagementSystem system) : DmsPageModel
     /// <summary>Gets the active staff available for the window currently entered, for guidance.</summary>
     public IReadOnlyList<DeliveryStaff> StaffForEnteredWindow { get; private set; } = [];
 
+    /// <summary>Gets whether availability was checked for the entered times.</summary>
+    public bool AvailabilityChecked { get; private set; }
+
     /// <summary>Gets whether the quote review step is shown.</summary>
     public bool IsReviewingQuote { get; private set; }
 
@@ -96,6 +99,64 @@ public sealed class DetailsModel(DeliveryManagementSystem system) : DmsPageModel
         Quote.Cost ??= SuggestedCost;
         return Page();
     }
+
+    /// <summary>Checks staff availability without issuing a quote or reserving staff.</summary>
+    public IActionResult OnPostCheckAvailability()
+    {
+        KeepValidationFor(nameof(Quote));
+        ModelState.Remove("Quote.Cost");
+
+        if (!Load())
+        {
+            return NotFoundMessage($"No request with reference '{Reference}' was found.");
+        }
+
+        if (!CanQuote)
+        {
+            ModelState.AddModelError(
+                string.Empty,
+                "The customer has already responded, so this quote can no longer be changed.");
+            return Page();
+        }
+
+        if (!ModelState.IsValid)
+        {
+            return Page();
+        }
+
+        DateTime pickup = Quote.EstimatedPickup!.Value;
+        DateTime delivery = Quote.EstimatedDelivery!.Value;
+
+        if (pickup <= Now + DeliveryQuote.AcceptanceLeadTime)
+        {
+            ModelState.AddModelError(
+                "Quote.EstimatedPickup",
+                "Choose a pickup time more than one hour from now.");
+            return Page();
+        }
+
+        if (delivery <= pickup)
+        {
+            ModelState.AddModelError(
+                "Quote.EstimatedDelivery",
+                "The estimated delivery time must be later than pickup.");
+            return Page();
+        }
+
+        if (delivery - pickup > DeliveryQuote.MaxDeliveryDuration)
+        {
+            ModelState.AddModelError(
+                "Quote.EstimatedDelivery",
+                "The estimated delivery time must be within 12 hours of pickup.");
+            return Page();
+        }
+
+        StaffForEnteredWindow = Roster.FindSuitableStaff(
+            new DeliveryWindow(pickup, delivery));
+        AvailabilityChecked = true;
+        return Page();
+    }
+
 
     /// <summary>Checks the quote and shows it for review before it is issued (A1 T2 subtask 5).</summary>
     public IActionResult OnPostReviewQuote()

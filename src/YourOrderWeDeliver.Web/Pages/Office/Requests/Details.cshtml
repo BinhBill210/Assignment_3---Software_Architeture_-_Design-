@@ -198,11 +198,44 @@
                         {
                             <text>No staff have availability recorded on or after the preferred date. <a asp-page="/Availability/Index">Update availability</a> first.</text>
                         }
-                        @if (Model.StaffForEnteredWindow.Count > 0)
+                        @if (Model.AvailabilityChecked)
                         {
-                            <br /><text>Available for the times entered: @string.Join(", ", Model.StaffForEnteredWindow.Select(s => s.Name)).</text>
+                            <div class="mt-3" role="status">
+                                <strong>Availability last checked for:</strong>
+                                @DisplayFormat.Window(Model.Quote.ToWindow())
+
+                                @if (Model.StaffForEnteredWindow.Count > 0)
+                                {
+                                    <p class="mt-2 mb-1">Available staff:</p>
+                                    <ul class="mb-2">
+                                        @foreach (var staff in Model.StaffForEnteredWindow)
+                                        {
+                                            <li>@staff.Name (@staff.Id)</li>
+                                        }
+                                    </ul>
+                                }
+                                else
+                                {
+                                    <p class="text-warning mt-2 mb-2">
+                                        No staff are available for this period.
+                                        Choose different times or update staff availability.
+                                    </p>
+                                }
+
+                                <p class="mb-0">
+                                    This check does not reserve a driver.
+                                    Availability is checked again when staff are allocated
+                                    after customer acceptance. If you change the times,
+                                    check availability again.
+                                </p>
+                            </div>
                         }
                     </div>
+                    <button type="submit"
+                            class="btn btn-outline-primary me-2"
+                            asp-page-handler="CheckAvailability">
+                        Check staff availability
+                    </button>
 
                     <button type="submit" class="btn btn-primary" asp-page-handler="ReviewQuote">Review quote</button>
                 }
