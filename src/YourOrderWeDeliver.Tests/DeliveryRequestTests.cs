@@ -57,7 +57,50 @@ public sealed class DeliveryRequestTests
         Assert.Empty(world.Register.Requests);
         Assert.Empty(world.Register.Customers);
     }
+    [Theory]
+    [InlineData("Different Person", "0412 345 678")]
+    [InlineData("Ava Nguyen", "0499 888 777")]
+    [InlineData("Different Person", "0499 888 777")]
+    public void ReturningCustomer_ConflictingDetails_RejectedWithoutChangingExistingRecords(
+        string name, string phone)
+    {
+        var world = new TestWorld();
+        DeliveryRequest first = world.RecordRequest();
 
+        RequestDetails conflictingDetails = TestWorld.ValidDetails() with
+        {
+            CustomerName = name,
+            CustomerPhone = phone,
+        };
+
+        var validationError = Assert.Throws<BusinessRuleException>(
+            () => world.Register.ValidateRequest(conflictingDetails, world.Now));
+
+        var submissionError = Assert.Throws<BusinessRuleException>(
+            () => world.Register.RecordRequest(
+                conflictingDetails, RequestChannel.CustomerOnline, world.Now));
+
+        Assert.Contains("do not match", validationError.Message, StringComparison.Ordinal);
+        Assert.Contains("do not match", submissionError.Message, StringComparison.Ordinal);
+        Assert.Equal("Ava Nguyen", first.Customer.Name);
+        Assert.Equal("0412345678", first.Customer.Phone);
+        Assert.Single(world.Register.Customers);
+        Assert.Single(world.Register.Requests);
+        Assert.Single(first.Customer.Requests);
+
+        Assert.Same(
+            first,
+            world.Register.FindRequestForCustomer(first.Reference, "0412345678"));
+
+        if (phone == "0499 888 777")
+        {
+            Assert.Null(
+                world.Register.FindRequestForCustomer(first.Reference, phone));
+        }
+
+        DeliveryRequest next = world.RecordRequest();
+        Assert.Equal("REQ-100002", next.Reference);
+    }
     [Fact]
     public void RecordRequest_NoParcels_Rejected()
     {

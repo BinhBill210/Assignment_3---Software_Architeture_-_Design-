@@ -64,10 +64,7 @@ public sealed class DeliveryRegister
             LastCustomerNumber++;
             _customers.Add(customer.Id, customer);
         }
-        else
-        {
-            customer.UpdateContactDetails(prepared.Name, prepared.Phone);
-        }
+        
 
         var request = new DeliveryRequest(
             prepared.Reference,
@@ -172,6 +169,21 @@ public sealed class DeliveryRegister
         string name = Require.PersonName(details.CustomerName, "Customer name", 100);
         string email = Require.Email(details.CustomerEmail);
         string phone = Require.Phone(details.CustomerPhone);
+        Customer? existingCustomer = _customers.Values.FirstOrDefault(
+            customer => string.Equals(customer.Email, email, StringComparison.OrdinalIgnoreCase));
+
+        if (existingCustomer is not null)
+        {
+            bool detailsMatch =
+                string.Equals(existingCustomer.Name, name, StringComparison.OrdinalIgnoreCase)
+                && string.Equals(existingCustomer.Phone, phone, StringComparison.Ordinal);
+
+            Require.That(
+                detailsMatch,
+                "The customer details do not match the existing record for this email address. "
+                + "Check the name and phone number, or contact the office for assistance. "
+                + "Existing customer details have not been changed.");
+        }
         Address pickup = Address.Create(details.Pickup.Street, details.Pickup.Suburb, details.Pickup.Postcode, "Pickup");
         Address destination = Address.Create(
             details.Destination.Street, details.Destination.Suburb, details.Destination.Postcode, "Destination");
