@@ -53,7 +53,7 @@ public sealed class RespondModel(DeliveryManagementSystem system) : DmsPageModel
     }
 
     /// <summary>Records the confirmed response.</summary>
-    public IActionResult OnPostConfirm(bool accept)
+    public IActionResult OnPostConfirm(bool accept, int quoteRevision)
     {
         if (!FindOrReport())
         {
@@ -61,7 +61,8 @@ public sealed class RespondModel(DeliveryManagementSystem system) : DmsPageModel
         }
 
         Delivery? delivery = null;
-        if (TryChange(() => delivery = Register.RecordQuoteResponse(DeliveryRequest!, accept, Now)))
+        if (TryChange(() => delivery = Register.RecordQuoteResponse(
+            DeliveryRequest!, accept, Now, expectedRevision: quoteRevision)))
         {
             CreatedDelivery = delivery;
             ViewData["Outcome"] = accept

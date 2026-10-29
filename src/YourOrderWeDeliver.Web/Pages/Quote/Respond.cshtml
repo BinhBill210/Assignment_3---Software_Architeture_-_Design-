@@ -76,6 +76,7 @@
                 <form method="post" novalidate>
                     <input type="hidden" asp-for="Lookup.Reference" />
                     <input type="hidden" asp-for="Lookup.Contact" />
+                    <input type="hidden" name="quoteRevision" value="@quote.Revision" />
                     @if (Model.PendingChoice is bool accept)
                     {
                         <div class="alert @(accept ? "alert-success" : "alert-warning")">

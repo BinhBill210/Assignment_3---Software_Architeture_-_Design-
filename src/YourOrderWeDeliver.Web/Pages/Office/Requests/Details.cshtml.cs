@@ -267,21 +267,31 @@ public sealed class DetailsModel(DeliveryManagementSystem system) : DmsPageModel
     }
 
     /// <summary>Asks office staff to confirm the response the customer gave by phone.</summary>
-    public IActionResult OnPostChooseResponse(bool accept)
+    public IActionResult OnPostChooseResponse(bool accept, int quoteRevision)
     {
         ModelState.Clear();
         if (!Load())
         {
             return NotFoundMessage($"No request with reference '{Reference}' was found.");
         }
+        if (DeliveryRequest!.Quote is { } currentQuote
+            && quoteRevision != currentQuote.Revision)
+        {
+            ModelState.AddModelError(
+                string.Empty,
+                "This quote has changed since it was displayed. "
+                + "Review the updated cost and times, then confirm your decision again.");
 
+            FillQuoteFromCurrentOrSuggestion();
+            return Page();
+        }
         PendingResponse = accept;
         FillQuoteFromCurrentOrSuggestion();
         return Page();
     }
 
     /// <summary>Records the confirmed response on the customer's behalf (A1 T3 variant 2a).</summary>
-    public IActionResult OnPostConfirmResponse(bool accept)
+    public IActionResult OnPostConfirmResponse(bool accept, int quoteRevision)
     {
         ModelState.Clear();
         if (!Load())
@@ -290,7 +300,8 @@ public sealed class DetailsModel(DeliveryManagementSystem system) : DmsPageModel
         }
 
         Delivery? delivery = null;
-        if (!TryChange(() => delivery = Register.RecordQuoteResponse(DeliveryRequest!, accept, Now)))
+        if (!TryChange(() => delivery = Register.RecordQuoteResponse(
+            DeliveryRequest!, accept, Now, expectedRevision: quoteRevision)))
         {
             FillQuoteFromCurrentOrSuggestion();
             return Page();

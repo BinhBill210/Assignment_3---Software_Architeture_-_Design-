@@ -103,6 +103,7 @@
             {
                 <form method="post" novalidate>
                     <input type="hidden" asp-for="Reference" />
+                    <input type="hidden" name="quoteRevision" value="@quote.Revision" />
                     @if (Model.PendingResponse is bool accept)
                     {
                         <div class="alert @(accept ? "alert-success" : "alert-warning")">

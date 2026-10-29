@@ -121,12 +121,17 @@ public sealed class DeliveryRegister
     /// <see cref="Delivery"/> is created and registered; on decline the request is kept but goes no further.
     /// </summary>
     /// <returns>The new delivery, or <c>null</c> when the quote was declined.</returns>
-    public Delivery? RecordQuoteResponse(DeliveryRequest request, bool accepted, DateTime now)
+    public Delivery? RecordQuoteResponse(
+        DeliveryRequest request, bool accepted, DateTime now, int? expectedRevision = null)
     {
         ArgumentNullException.ThrowIfNull(request);
         DeliveryQuote quote = request.Quote
             ?? throw new BusinessRuleException(
                 $"No quote has been prepared yet for request {request.Reference}. Please wait for our office to send a quote.");
+        Require.That(
+            expectedRevision is null || expectedRevision == quote.Revision,
+            "This quote has changed since it was displayed. "
+            + "Review the updated cost and times, then confirm your decision again.");
         quote.RecordResponse(accepted, now);
         if (!accepted)
         {
