@@ -10,6 +10,11 @@ public sealed record AvailabilityPeriod(string Id, DeliveryWindow Window);
 /// <summary>Observer notified when a staff member's availability changes (A2 Section 6.5.2).</summary>
 public interface IAvailabilityObserver
 {
+    /// <summary>Checks whether a period can be removed before availability changes.</summary>
+    /// <param name="availability">The availability being changed.</param>
+    /// <param name="period">The period proposed for removal.</param>
+    void ValidatePeriodRemoval(
+        DeliveryStaffAvailability availability, AvailabilityPeriod period);
     /// <summary>Called after a period is added or removed.</summary>
     /// <param name="availability">The availability that changed.</param>
     /// <param name="changedAt">When the change was recorded.</param>
@@ -70,6 +75,10 @@ public sealed class DeliveryStaffAvailability
     {
         AvailabilityPeriod period = _periods.FirstOrDefault(p => string.Equals(p.Id, periodId, StringComparison.OrdinalIgnoreCase))
             ?? throw new BusinessRuleException($"Availability period {periodId} was not found for {Staff.Name}.");
+        foreach (IAvailabilityObserver observer in _observers.ToList())
+        {
+            observer.ValidatePeriodRemoval(this, period);
+        }
         _periods.Remove(period);
         NotifyObservers(now);
     }

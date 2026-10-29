@@ -93,6 +93,7 @@ public sealed class Delivery
         Require.That(
             Status is DeliveryStatus.AwaitingAllocation or DeliveryStatus.Allocated,
             $"Delivery {Id} has already been picked up, so its delivery staff member can no longer be changed.");
+        Require.That(CollectedParcelCount == 0, $"Delivery {Id} has parcels marked as collected, so its delivery staff member cannot be changed.");
         Require.That(!ReferenceEquals(staff, AllocatedStaff), $"{staff.Name} is already allocated to delivery {Id}.");
 
         string? reason = roster.DescribeUnsuitability(staff, Window, this);
@@ -201,6 +202,7 @@ public sealed class Delivery
 
     internal void ReturnToAllocationQueue(string reason, DateTime now)
     {
+        Require.That(CollectedParcelCount == 0, $"Delivery {Id} has parcels marked as collected, so its allocation cannot be removed.");
         DeliveryStaff? previous = AllocatedStaff;
         previous?.ReleaseDelivery(this);
         AllocatedStaff = null;

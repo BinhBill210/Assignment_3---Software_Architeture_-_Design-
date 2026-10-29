@@ -170,7 +170,9 @@ public sealed class StaffRoster : IAvailabilityObserver
     {
         ArgumentNullException.ThrowIfNull(staff);
         Require.That(staff.IsActive, $"{staff.Name} is already inactive.");
-        Delivery? inTransit = staff.CurrentDeliveries.FirstOrDefault(delivery => delivery.Status == DeliveryStatus.PickedUp);
+        Delivery? inTransit = staff.CurrentDeliveries.FirstOrDefault(
+            delivery => delivery.CollectedParcelCount > 0
+                || delivery.Status == DeliveryStatus.PickedUp);
         Require.That(
             inTransit is null,
             $"{staff.Name} is carrying parcels for delivery {inTransit?.Id}. Complete that delivery before recording that they have left.");
@@ -190,6 +192,24 @@ public sealed class StaffRoster : IAvailabilityObserver
         staff.JoinedOn = rejoinedOn;
     }
 
+    /// <inheritdoc />
+    void IAvailabilityObserver.ValidatePeriodRemoval(
+        DeliveryStaffAvailability availability, AvailabilityPeriod period)
+    {
+        ArgumentNullException.ThrowIfNull(availability);
+        ArgumentNullException.ThrowIfNull(period);
+
+        Delivery? affected = availability.Staff.CurrentDeliveries.FirstOrDefault(
+            delivery => delivery.CollectedParcelCount > 0
+                && !availability.Periods.Any(
+                    remaining => remaining.Id != period.Id
+                        && remaining.Window.Contains(delivery.Window)));
+
+        Require.That(
+            affected is null,
+            $"This availability period cannot be removed because delivery {affected?.Id} "
+            + "has parcels marked as collected. Complete the delivery before removing its availability.");
+    }
     /// <inheritdoc />
     void IAvailabilityObserver.OnAvailabilityChanged(DeliveryStaffAvailability availability, DateTime changedAt)
     {
