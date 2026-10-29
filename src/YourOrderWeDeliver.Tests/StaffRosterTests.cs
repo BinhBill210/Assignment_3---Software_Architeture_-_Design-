@@ -94,6 +94,60 @@ public sealed class StaffRosterTests
         Assert.True(sam.IsActive);
     }
 
+    [Theory]
+    [InlineData("reassign", 1)]
+    [InlineData("reassign", 2)]
+    [InlineData("remove availability", 1)]
+    [InlineData("remove availability", 2)]
+    [InlineData("deactivate", 1)]
+    [InlineData("deactivate", 2)]
+    public void ChangingDriver_AfterCollectionStarts_RejectedWithoutChangingState(
+        string action, int collectedCount)
+    {
+        var world = new TestWorld();
+        DeliveryStaff sam = world.AddStaff("Sam Lee", "sam@yowd.com.au");
+        DeliveryStaff kim = world.AddStaff("Kim Tran", "kim@yowd.com.au");
+        Delivery delivery = world.CreateAcceptedDelivery(parcelCount: 2);
+        delivery.AllocateStaff(sam, world.Roster, world.Now);
+
+        foreach (Parcel parcel in delivery.Parcels.Take(collectedCount))
+        {
+            delivery.RecordParcelCollected(parcel.Id, sam, world.Now);
+        }
+
+        AvailabilityPeriod originalPeriod = Assert.Single(sam.Availability.Periods);
+        int historyCount = delivery.History.Count;
+
+        Assert.Throws<BusinessRuleException>(() =>
+        {
+            switch (action)
+            {
+                case "reassign":
+                    delivery.AllocateStaff(kim, world.Roster, world.Now);
+                    break;
+                case "remove availability":
+                    sam.Availability.RemovePeriod(originalPeriod.Id, world.Now);
+                    break;
+                case "deactivate":
+                    world.Roster.DeactivateStaff(
+                        sam, DateOnly.FromDateTime(world.Now), world.Now);
+                    break;
+                default:
+                    throw new InvalidOperationException("Unknown test action.");
+            }
+        });
+
+        Assert.Same(sam, delivery.AllocatedStaff);
+        Assert.Equal(DeliveryStatus.Allocated, delivery.Status);
+        Assert.Equal(collectedCount, delivery.CollectedParcelCount);
+        Assert.Equal(historyCount, delivery.History.Count);
+        Assert.Contains(delivery, sam.CurrentDeliveries);
+        Assert.DoesNotContain(delivery, kim.CurrentDeliveries);
+        Assert.Same(originalPeriod, Assert.Single(sam.Availability.Periods));
+        Assert.True(sam.IsActive);
+        Assert.Null(sam.LeftOn);
+        Assert.Empty(world.Roster.ReassignmentLog);
+    }
     [Fact]
     public void RegisterNewStaff_ExistingEmail_DirectsUserToReactivate()
     {
