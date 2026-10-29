@@ -64,7 +64,76 @@ public sealed class DeliveryQuoteTests
         Assert.Equal(35m, revised.Cost);
         Assert.Equal(RequestStatus.Quoted, request.Status);
     }
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public void RecordQuoteResponse_OutdatedRevision_RejectedWithoutRecordingResponse(
+        bool accepted)
+    {
+        var world = new TestWorld();
+        world.AddStaff("Sam Lee", "sam@yowd.com.au");
+        DeliveryRequest request = world.RecordRequest();
 
+        DeliveryQuote quote = request.PrepareQuote(
+            TestWorld.Terms(cost: 40m), world.Roster, world.Now);
+
+        int displayedRevision = quote.Revision;
+
+        request.PrepareQuote(
+            TestWorld.Terms(cost: 60m), world.Roster, world.Now);
+
+        var error = Assert.Throws<BusinessRuleException>(
+            () => world.Register.RecordQuoteResponse(
+                request, accepted, world.Now,
+                expectedRevision: displayedRevision));
+
+        Assert.Contains("quote has changed", error.Message, StringComparison.Ordinal);
+        Assert.Equal(60m, quote.Cost);
+        Assert.Equal(QuoteResponse.Pending, quote.Response);
+        Assert.Null(quote.RespondedAt);
+        Assert.Equal(RequestStatus.Quoted, request.Status);
+        Assert.Null(request.Delivery);
+        Assert.Empty(world.Register.Deliveries);
+    }
+
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public void RecordQuoteResponse_CurrentRevision_RecordsResponse(
+        bool accepted)
+    {
+        var world = new TestWorld();
+        world.AddStaff("Sam Lee", "sam@yowd.com.au");
+        DeliveryRequest request = world.RecordRequest();
+
+        request.PrepareQuote(
+            TestWorld.Terms(cost: 40m), world.Roster, world.Now);
+
+        DeliveryQuote quote = request.PrepareQuote(
+            TestWorld.Terms(cost: 60m), world.Roster, world.Now);
+
+        Delivery? delivery = world.Register.RecordQuoteResponse(
+            request, accepted, world.Now,
+            expectedRevision: quote.Revision);
+
+        Assert.Equal(
+            accepted ? QuoteResponse.Accepted : QuoteResponse.Declined,
+            quote.Response);
+        Assert.Equal(world.Now, quote.RespondedAt);
+
+        if (accepted)
+        {
+            Assert.NotNull(delivery);
+            Assert.Same(delivery, request.Delivery);
+            Assert.Single(world.Register.Deliveries);
+        }
+        else
+        {
+            Assert.Null(delivery);
+            Assert.Null(request.Delivery);
+            Assert.Empty(world.Register.Deliveries);
+        }
+    }
     [Fact]
     public void RecordQuoteResponse_Accepted_CreatesAndRegistersDelivery()
     {
