@@ -33,9 +33,18 @@ public sealed class IndexModel(DeliveryManagementSystem system) : DmsPageModel(s
     public void OnGet()
     {
         ModelState.Clear();
+
         if (IsStaffView && !string.IsNullOrWhiteSpace(Reference))
         {
             DeliveryRequest = FindForStaff(Reference);
+
+            if (DeliveryRequest is null)
+            {
+                ModelState.AddModelError(
+                    string.Empty,
+                    "No matching request or delivery is available to your account. "
+                    + "Check the reference and your allocation.");
+            }
         }
     }
 
@@ -58,7 +67,7 @@ public sealed class IndexModel(DeliveryManagementSystem system) : DmsPageModel(s
             ModelState.AddModelError(
                 string.Empty,
                 IsStaffView
-                    ? $"No request or delivery matches '{Reference}'. Check the number and try again."
+                    ? "No matching request or delivery is available to your account. Check the reference and your allocation."
                     : "We could not find a delivery with that reference and contact detail. Check both and try again, or call our office.");
         }
 
@@ -67,12 +76,38 @@ public sealed class IndexModel(DeliveryManagementSystem system) : DmsPageModel(s
 
     private DeliveryRequest? FindForStaff(string? reference)
     {
-        return Register.FindRequest(reference) ?? Register.FindDelivery(reference)?.Request;
-    }
+        DeliveryRequest? request =
+            Register.FindRequest(reference) ?? Register.FindDelivery(reference)?.Request;
 
+        if (request is null || User.Identity?.IsAuthenticated != true)
+        {
+            return null;
+        }
+
+        if (User.IsOffice())
+        {
+            return request;
+        }
+
+        if (!User.IsDeliveryStaff())
+        {
+            return null;
+        }
+
+        DeliveryStaff? staff = Roster.Find(User.StaffId());
+
+        return staff is { IsActive: true }
+            && ReferenceEquals(request.Delivery?.AllocatedStaff, staff)
+                ? request
+                : null;
+    }
     private DeliveryRequest? FindForCustomer(string? reference, string? contact)
     {
-        DeliveryRequest? request = FindForStaff(reference);
-        return request is not null && request.Customer.IsIdentifiedBy(contact) ? request : null;
+        DeliveryRequest? request =
+            Register.FindRequest(reference) ?? Register.FindDelivery(reference)?.Request;
+
+        return request is not null && request.Customer.IsIdentifiedBy(contact)
+            ? request
+            : null;
     }
 }
