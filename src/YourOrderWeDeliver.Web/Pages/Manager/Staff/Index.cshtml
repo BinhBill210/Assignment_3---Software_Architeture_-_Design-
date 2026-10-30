@@ -24,11 +24,11 @@
                             <td>
                                 @if (staff.IsActive)
                                 {
-                                    <span class="badge text-bg-success">Active</span>
+                                    <span class="text-success fw-bold">Active</span>
                                 }
                                 else
                                 {
-                                    <span class="badge text-bg-secondary">Left @(staff.LeftOn is { } left ? DisplayFormat.Day(left) : string.Empty)</span>
+                                    <span class="text-danger fw-bold">Left @(staff.LeftOn is { } left ? DisplayFormat.Day(left) : string.Empty)</span>
                                 }
                             </td>
                             <td>@staff.CurrentDeliveries.Count()</td>
